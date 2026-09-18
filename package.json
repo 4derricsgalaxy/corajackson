@@ -9,15 +9,29 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@portabletext/react": "^8.0.1",
+    "@react-three/drei": "^10.7.8",
+    "@react-three/fiber": "^9.7.0",
+    "@react-three/postprocessing": "^3.1.1",
+    "@wix/data": "^1.0.521",
+    "@wix/image-kit": "^1.125.0",
+    "@wix/sdk": "^1.21.16",
+    "clsx": "^2.1.1",
+    "d3-hierarchy": "^3.1.2",
+    "motion": "^13.4.0",
     "next": "16.3.5",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "three": "^0.186.0",
+    "three-stdlib": "^2.36.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/d3-hierarchy": "^3.1.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
