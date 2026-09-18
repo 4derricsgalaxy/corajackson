@@ -130,9 +130,9 @@ export const bySort = <T extends { sortOrder?: number | string; title: string }>
   return a.title.localeCompare(b.title);
 };
 
-const useLocalSource = () => process.env.CONTENT_SOURCE === "local";
+const isLocalSource = () => process.env.CONTENT_SOURCE === "local";
 async function withFallback<T>(remote: () => Promise<T>, local: () => T): Promise<T> {
-  if (useLocalSource()) return local();
+  if (isLocalSource()) return local();
   try {
     return await remote();
   } catch (err) {
