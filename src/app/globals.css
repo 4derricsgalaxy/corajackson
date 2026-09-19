@@ -1,172 +1,1047 @@
 @import "tailwindcss";
 
-/* ---------- Heirloom archive tokens ---------- */
+/* ---------- Wix classic tokens (measured from the original site) ---------- */
 :root {
-  --paper: #f4ecdc;
-  --paper-2: #ebe0c9;
-  --paper-3: #dfd1b3;
-  --ink: #1c1a15;
-  --ink-2: #4a4437;
-  --ink-3: #7c745f;
-  --oak: #3b4a2f;
-  --oak-2: #56653f;
-  --moss: #8a9a5b;
-  --bark: #5a3d2a;
-  --gold: #c39a4a;
-  --gold-2: #e2c27a;
-  --rose: #9c4d45;
-  --line: rgba(28, 26, 21, 0.14);
-  --shadow: 0 30px 60px -30px rgba(40, 30, 10, 0.45);
-  --radius: 4px;
+  --wix-surround: #b5b5b5;
+  --wix-canvas: #ffffff;
+  --wix-ink: #000000;
+  --wix-heading: #292f33;
+  --wix-muted: #727272;
+  --wix-btn-border: #7b736f;
+  --wix-btn-text: #59514d;
+  --wix-pill: #566fb8;
+  --wix-photo-bg: #292f33;
+  --wix-bar: #757575;
+  --wix-canvas-width: 980px;
   color-scheme: light;
 }
 
-:root[data-theme="dark"] {
-  --paper: #14130f;
-  --paper-2: #1d1b15;
-  --paper-3: #27241b;
-  --ink: #f0e7d3;
-  --ink-2: #c9bfa6;
-  --ink-3: #8f866f;
-  --oak: #9fb37a;
-  --oak-2: #7d905c;
-  --moss: #5f7a3d;
-  --bark: #b08262;
-  --gold: #d7b264;
-  --gold-2: #f0d896;
-  --rose: #d0847b;
-  --line: rgba(240, 231, 211, 0.14);
-  --shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.8);
-  color-scheme: dark;
-}
-
 @theme inline {
-  --color-paper: var(--paper);
-  --color-paper-2: var(--paper-2);
-  --color-paper-3: var(--paper-3);
-  --color-ink: var(--ink);
-  --color-ink-2: var(--ink-2);
-  --color-ink-3: var(--ink-3);
-  --color-oak: var(--oak);
-  --color-oak-2: var(--oak-2);
-  --color-moss: var(--moss);
-  --color-bark: var(--bark);
-  --color-gold: var(--gold);
-  --color-gold-2: var(--gold-2);
-  --color-rose: var(--rose);
-  --color-line: var(--line);
-  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
-  --font-body: var(--font-newsreader), Georgia, serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --color-wix-surround: var(--wix-surround);
+  --color-wix-heading: var(--wix-heading);
+  --color-wix-muted: var(--wix-muted);
+  --color-wix-pill: var(--wix-pill);
+  --font-arial: Arial, Helvetica, sans-serif;
+  --font-proxima: var(--font-proxima), "Proxima Nova", Arial, sans-serif;
+  --font-didot: var(--font-didot), Didot, "Bodoni MT", Georgia, serif;
+  --font-lulo: var(--font-lulo), Arial, sans-serif;
+  --font-clarendon: var(--font-clarendon), Clarendon, Georgia, serif;
+  --font-poppins: var(--font-poppins), Arial, sans-serif;
 }
 
 html {
-  background: var(--paper);
-  color: var(--ink);
-  scroll-behavior: smooth;
+  background: var(--wix-surround);
+  color: var(--wix-ink);
 }
 
 body {
-  font-family: var(--font-body);
-  font-feature-settings: "liga", "kern", "onum";
-  -webkit-font-smoothing: antialiased;
-  background:
-    radial-gradient(1200px 700px at 80% -10%, color-mix(in oklab, var(--gold) 14%, transparent), transparent 60%),
-    radial-gradient(900px 600px at -10% 100%, color-mix(in oklab, var(--oak) 12%, transparent), transparent 60%),
-    var(--paper);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  line-height: 1.1;
+  background: var(--wix-surround);
   min-height: 100dvh;
+  margin: 0;
 }
 
-/* paper grain */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.35;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.16 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-}
-:root[data-theme="dark"] body::before { mix-blend-mode: screen; opacity: 0.18; }
-
-::selection { background: color-mix(in oklab, var(--gold) 45%, transparent); }
-
-h1, h2, h3, .display {
-  font-family: var(--font-display);
-  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 1;
-  letter-spacing: -0.015em;
-  text-wrap: balance;
-}
-
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--ink-3);
-}
-
-.rule {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--line) 20%, var(--line) 80%, transparent);
-}
-
-.prose-heirloom {
-  font-size: 1.125rem;
-  line-height: 1.75;
-  color: var(--ink-2);
-}
-.prose-heirloom p + p { margin-top: 1.1em; }
-.prose-heirloom p:first-of-type::first-letter {
-  font-family: var(--font-display);
-  float: left;
-  font-size: 4.2em;
-  line-height: 0.8;
-  padding: 0.08em 0.12em 0 0;
-  color: var(--gold);
-}
-.prose-heirloom a { color: var(--oak); text-decoration: underline; text-underline-offset: 3px; }
-.prose-heirloom strong { color: var(--ink); }
-
-/* frame for portraits */
-.frame {
+/* The fixed white page the Wix editor drew everything on. */
+.wix-canvas {
   position: relative;
-  background: var(--paper-2);
-  padding: 6px;
-  box-shadow: var(--shadow), inset 0 0 0 1px var(--line);
+  width: 100%;
+  max-width: var(--wix-canvas-width);
+  margin: 0 auto;
+  background: var(--wix-canvas);
+  overflow: hidden;
 }
-.frame::after {
-  content: "";
+
+/* Full-canvas decorative artwork behind a page (leaves, tree). */
+.wix-canvas-art {
   position: absolute;
-  inset: 12px;
-  border: 1px solid color-mix(in oklab, var(--gold) 55%, transparent);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+.wix-canvas > :not(.wix-canvas-art) { position: relative; z-index: 1; }
+
+/* Page titles: "Joanne Jackson", "Family Tree", "Cora Mae Wilson/ Jackson" */
+.wix-h1 {
+  font-family: var(--font-proxima), Arial, sans-serif;
+  font-size: 40px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--wix-heading);
+  margin: 0;
+}
+.wix-h1-light { font-weight: 400; }
+
+/* Section titles: "Children" */
+.wix-h2 {
+  font-family: var(--font-proxima), Arial, sans-serif;
+  font-size: 28px;
+  line-height: 1.4;
+  font-weight: 700;
+  color: var(--wix-heading);
+  margin: 0;
 }
 
-.link-underline {
-  background-image: linear-gradient(currentColor, currentColor);
-  background-size: 0% 1px;
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  transition: background-size 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-.link-underline:hover { background-size: 100% 1px; }
+/* "Born:" / "May 19, 1955" pairs */
+.wix-label { font: 700 15px/1.1 Arial, Helvetica, sans-serif; color: #000; }
+.wix-value { font: 400 12px/1.1 Arial, Helvetica, sans-serif; color: #000; }
+/* "Father: Allen Couch" lines */
+.wix-note { font: 400 13px/1.1 Arial, Helvetica, sans-serif; color: #000; }
+.wix-note b { font-weight: 700; }
+/* "Memories:" */
+.wix-strong { font: 700 14px/1.4 Arial, Helvetica, sans-serif; color: var(--wix-heading); }
 
-@keyframes rise {
-  from { opacity: 0; transform: translateY(18px); filter: blur(4px); }
-  to { opacity: 1; transform: none; filter: none; }
+/* The italic quote under the portrait */
+.wix-quote {
+  font-family: var(--font-didot), Didot, Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.1;
+  color: #010101;
 }
-.rise { animation: rise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
-.rise-1 { animation-delay: 0.05s; }
-.rise-2 { animation-delay: 0.18s; }
-.rise-3 { animation-delay: 0.32s; }
-.rise-4 { animation-delay: 0.48s; }
+.wix-quote p { margin: 0; }
+.wix-quote p + p { text-indent: 8px; }
 
-@media (prefers-reduced-motion: reduce) {
-  .rise { animation: none; }
-  html { scroll-behavior: auto; }
+/* Child name under a photo */
+.wix-child-name {
+  font-family: var(--font-poppins), Arial, sans-serif;
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--wix-heading);
+}
+
+/* Photo with the thin dark Wix drop shadow */
+.wix-photo {
+  display: block;
+  background: var(--wix-photo-bg);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  object-fit: cover;
+}
+
+/* Double-ruled white frame around Cora's portrait */
+.wix-frame {
+  display: inline-block;
+  background: #fff;
+  padding: 4px;
+  border: 2px solid #000;
+  outline: 1px solid #000;
+  outline-offset: -6px;
+  box-shadow: 0 0 0 1px #fff;
+}
+.wix-frame img { display: block; margin: 5px; }
+
+/* Outlined rectangular buttons on the home page */
+.wix-btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 24px;
+  border: 2px solid var(--wix-btn-border);
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--wix-btn-text);
+  font-family: var(--font-lulo), Arial, sans-serif;
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background 0.3s, color 0.3s;
+}
+.wix-btn-outline:hover { background: var(--wix-btn-border); color: #fff; }
+
+/* Blue "Family Tree" pill */
+.wix-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 84px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 20px;
+  background: var(--wix-pill);
+  box-shadow: 0.88px 2.87px 0 0 rgba(86, 111, 184, 0.6);
+  color: #fff;
+  font-family: var(--font-clarendon), Georgia, serif;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 1.4;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.wix-pill:hover { filter: brightness(1.1); }
+
+/* Round gradient home icon */
+.wix-home {
+  display: inline-grid;
+  place-items: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 50%;
+  background: linear-gradient(#65a288 0%, #3002cf 100%);
+  color: #fff;
+}
+.wix-home-lg { width: 40px; height: 40px; }
+.wix-home:hover { filter: brightness(1.15); }
+
+/* "Cora Mae Jackson Family" footer label */
+.wix-footer-label {
+  font: 400 20px/1.1 Arial, Helvetica, sans-serif;
+  color: var(--wix-muted);
+  padding: 0 19px 0;
+  margin: 0;
+}
+
+/* Small floating "Home" tab that sits in the gray surround on person pages */
+.wix-side-tab {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 87px;
+  height: 23px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  font: 400 10px Arial, Helvetica, sans-serif;
+  color: #000;
+  text-decoration: none;
+}
+
+/* Text link like the gallery's "Show More" */
+.wix-text-link {
+  font: 400 13px Arial, Helvetica, sans-serif;
+  color: var(--wix-heading);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
 }
 
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; }
+
+/* ==========================================================================
+   PERSON PAGE (/family/[slug]) + MEMORIES SLIDER — .wix-person-* / .wix-slider-*
+   One template for every family member, measured from the original Joanne page.
+   Owned by the person-page agent; self-contained.
+   ========================================================================== */
+.wix-person-wrap {
+  position: relative;
+  width: 100%;
+  max-width: var(--wix-canvas-width);
+  margin: 0 auto;
+}
+
+/* floating "Home" / parent tab in the gray surround, left of the canvas */
+.wix-person-side-tab { display: none; left: -95px; top: 147px; z-index: 2; }
+.wix-person-side-tab:hover { background: #f1f1f1; }
+@media (min-width: 1200px) { .wix-person-side-tab { display: inline-flex; } }
+
+.wix-person { display: flex; flex-direction: column; }
+.wix-person-body { flex: 1 0 auto; display: flex; flex-direction: column; }
+.wix-person-body > :not(.wix-person-art) { position: relative; z-index: 1; }
+
+/* page art: the leaves (or the member's hero image) cover the top of the canvas, not the nav/footer band */
+.wix-person-art {
+  inset: -5px 0 auto 0;
+  height: calc(100% - 121px); /* of the page body: 687px on the Joanne page, as on the original */
+  min-height: 430px;
+  max-height: 960px;
+  object-fit: fill; /* the original stretched the leaves to the 980x687 box */
+}
+.wix-person-art-hero {
+  object-fit: cover;
+  opacity: 0.45;
+  /* a photo has a hard bottom edge the leaves don't: fade it out */
+  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+}
+
+/* ---- two columns ---- */
+.wix-person-cols {
+  display: flex;
+  align-items: flex-start;
+  padding: 0 20px 0 75px;
+}
+.wix-person-left { flex: none; width: 388px; }
+.wix-person-right { flex: 1 1 0; min-width: 0; }
+
+.wix-person-title {
+  /* may run past the left column (under it sits the first note block, which starts lower) */
+  width: 480px;
+  max-width: calc(100vw - 40px);
+  overflow-wrap: break-word;
+}
+
+/* portrait floats left and the fact column floats right inside a 293px box, so the quote starts
+   under the portrait and, when the facts run longer than the portrait, wraps beside them
+   instead of colliding with them */
+.wix-person-bio { width: 293px; margin: 14px 0 0 1px; }
+.wix-person-bio::after { content: ""; display: block; clear: both; }
+.wix-person-portrait { float: left; margin: 0 -8px 13px 0; line-height: 0; } /* -8px: lets the 141px fact float sit beside it */
+.wix-person-photo { object-fit: cover; color: rgba(255, 255, 255, 0.7); font: 400 10px/1.2 Arial, Helvetica, sans-serif; }
+.wix-person-portrait .wix-person-photo { width: 160px; height: 215px; }
+
+.wix-person-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #cfcfcf;
+  color: #8a8a8a;
+  font-family: var(--font-proxima), Arial, sans-serif;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.wix-person-facts { float: right; box-sizing: border-box; width: 141px; margin: -1px 0 0; padding: 0 0 0 13px; }
+.wix-person-fact { margin: 0 0 15.8px; }
+.wix-person-fact:last-child { margin-bottom: 8px; }
+.wix-person-fact dt { margin: 0; }
+.wix-person-fact dd { margin: 1.5px 0 0; overflow-wrap: break-word; }
+
+.wix-person-quote { clear: left; width: 186px; } /* always under the portrait; still wraps beside a tall fact column */
+.wix-person-quote-wide { clear: both; width: 370px; margin-bottom: 14px; } /* long biographies: a wider measure, below portrait and facts */
+.wix-person-quote .wix-quote, .wix-person-quote.wix-quote { overflow-wrap: break-word; }
+.wix-person-quote p { margin: 0; }
+
+/* ---- children ---- */
+.wix-person-children-h { margin: 24px 0 0 98px; }
+.wix-person-group { margin: 0 0 7px; }
+.wix-person-children-h + .wix-person-group { margin-top: -2px; }
+.wix-person-group:not(:has(.wix-person-group-note)) { padding-top: 12px; }
+.wix-person-group-note { margin: 0; }
+.wix-person-note-line { display: block; }
+.wix-person-note-line b { font-size: 14px; }
+.wix-person-note-line + .wix-person-note-line b { font-size: 13px; }
+
+.wix-person-kids {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(3, 99px);
+  gap: 14px 15px;
+  margin: 9px 0 0 94px;
+  padding: 0;
+}
+.wix-person-kid {
+  position: relative;
+  display: block;
+  width: 99px;
+  text-decoration: none;
+  color: inherit;
+}
+.wix-person-kid .wix-person-photo { width: 99px; height: 121px; transition: filter 0.2s; }
+.wix-person-kid:hover .wix-person-photo { filter: brightness(1.08); }
+/* the thin "lifted" shadow line the original drew under each row of baby photos:
+   every child draws its segment; the first/last of a row fade out past the photos */
+.wix-person-kid::after {
+  content: "";
+  position: absolute;
+  left: -7.5px;
+  right: -7.5px;
+  top: 121px;
+  height: 8px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.8) 1px, rgba(0, 0, 0, 0.3) 1px, rgba(0, 0, 0, 0.08) 5px, rgba(0, 0, 0, 0) 8px);
+  pointer-events: none;
+}
+.wix-person-kids > li:nth-child(3n + 1) .wix-person-kid::after {
+  left: -45px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 45px);
+  mask-image: linear-gradient(to right, transparent 0, #000 45px);
+}
+.wix-person-kids > li:nth-child(3n) .wix-person-kid::after,
+.wix-person-kids > li:last-child .wix-person-kid::after {
+  right: -45px;
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 45px);
+  mask-image: linear-gradient(to left, transparent 0, #000 45px);
+}
+.wix-person-kids > li:nth-child(3n + 1):last-child .wix-person-kid::after {
+  left: -30px;
+  right: -30px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
+}
+.wix-person-kid-name {
+  display: block;
+  margin: 8px -8px 0;
+  text-align: center;
+  line-height: 24px;
+  overflow-wrap: break-word;
+}
+.wix-person-kid:hover .wix-person-kid-name { text-decoration: underline; }
+
+/* ---- memories ---- */
+.wix-person-cols:has(+ .wix-person-memories) { min-height: 546px; }
+.wix-person-memories { margin-top: 2px; }
+.wix-person-memories-h { margin: 0; text-align: center; padding-right: 30px; }
+
+.wix-slider {
+  position: relative;
+  width: 841px;
+  max-width: 100%;
+  margin: 19px auto 0;
+  padding: 0 40px;
+  box-sizing: border-box;
+}
+.wix-slider-window {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.wix-slider-track {
+  list-style: none;
+  display: flex;
+  gap: 15px;
+  width: max-content;
+  margin: 0 auto;
+  padding: 0;
+}
+.wix-slider-track > li { flex: none; scroll-snap-align: start; }
+.wix-slider-thumb {
+  position: relative;
+  display: block;
+  width: 133px;
+  height: 133px;
+  padding: 0;
+  border: 0;
+  background: #515e65;
+  cursor: pointer;
+}
+.wix-slider-thumb img { display: block; width: 133px; height: 133px; object-fit: cover; }
+.wix-slider-thumb::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(202, 221, 230, 0.6);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.wix-slider-thumb:hover::after, .wix-slider-thumb:focus-visible::after { opacity: 1; }
+.wix-slider-thumb:focus-visible { outline: 2px solid var(--wix-pill); outline-offset: 2px; }
+
+.wix-slider-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 45px;
+  height: 80px;
+  margin-top: -40px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+.wix-slider-arrow:hover { opacity: 1; }
+.wix-slider-arrow:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+.wix-slider-prev { left: 0; }
+.wix-slider-next { right: 0; }
+
+/* lightbox */
+.wix-slider-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 64px 24px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.9);
+}
+.wix-slider-lb-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0;
+}
+.wix-slider-lb-figure img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100dvh - 150px);
+  object-fit: contain;
+  background: #292f33;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.6);
+}
+.wix-slider-lb-figure figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  color: #fff;
+  font: 400 14px/1.4 Arial, Helvetica, sans-serif;
+  text-align: center;
+}
+.wix-slider-lb-count { font-size: 12px; color: #b5b5b5; }
+.wix-slider-lb-close {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.wix-slider-lb-close:focus-visible { outline: 2px solid #fff; }
+.wix-slider-lb-prev { left: 8px; }
+.wix-slider-lb-next { right: 8px; }
+
+/* ---- stories, nav, footer ---- */
+/* nav band: home icon + pill centered as on the original; story links sit quietly in the empty left of the band */
+.wix-person-navband {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: start;
+  margin-top: auto; /* sparse pages: the nav settles above the footer instead of floating mid-canvas */
+  padding-top: 40px;
+}
+.wix-person-memories + .wix-person-navband { padding-top: 10px; }
+.wix-person-nav { grid-column: 2; grid-row: 1; gap: 21px; }
+.wix-person-stories { grid-column: 1; grid-row: 1; padding: 6px 16px 0 76px; }
+.wix-person-stories h2 { margin: 0; }
+.wix-person-stories ul { list-style: none; margin: 1px 0 0; padding: 0; }
+.wix-person-stories li { margin: 4px 0 0; }
+.wix-person-footer { padding: 13px 0 14px 3px; }
+.wix-person-footer .wix-footer-label { line-height: 22px; }
+
+/* ---- below the 980px canvas: single column ---- */
+@media (max-width: 979px) {
+  .wix-person-art { top: 0; height: 100%; max-height: 760px; object-fit: cover; }
+  .wix-person-cols { flex-direction: column; align-items: stretch; padding: 8px 18px 0; min-height: 0 !important; }
+  .wix-person-left { width: 100%; }
+  .wix-person-title { width: auto; max-width: none; font-size: 32px; line-height: 1.25; }
+  .wix-person-bio { width: auto; margin-left: 0; }
+  .wix-person-facts { width: calc(100% - 152px); }
+  .wix-person-quote, .wix-person-quote-wide { width: auto; max-width: 420px; }
+  .wix-person-right { margin-top: 8px; }
+  .wix-person-children-h { margin: 18px 0 8px; }
+  .wix-person-children-h + .wix-person-group { margin-top: 0; }
+  .wix-person-group { margin-bottom: 16px; }
+  .wix-person-kids { margin-left: 0; }
+  .wix-person-kids > li:nth-child(3n + 1) .wix-person-kid::after {
+    left: -16px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px);
+    mask-image: linear-gradient(to right, transparent 0, #000 16px);
+  }
+  .wix-person-kids > li:nth-child(3n + 1):last-child .wix-person-kid::after {
+    left: -16px;
+    right: -16px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);
+  }
+  .wix-person-memories { margin-top: 22px; }
+  .wix-person-memories-h { padding-right: 0; }
+  .wix-slider { padding: 0; margin-top: 12px; }
+  .wix-slider-window { padding: 0 18px; scroll-padding: 0 18px; }
+  .wix-slider-prev { left: -4px; }
+  .wix-slider-next { right: -4px; }
+  .wix-person-navband { display: flex; flex-direction: column; align-items: center; gap: 24px; padding-top: 32px; }
+  .wix-person-memories + .wix-person-navband { padding-top: 26px; }
+  .wix-person-stories { padding: 0 18px; text-align: center; }
+  .wix-slider-lightbox { padding: 56px 12px 20px; }
+  .wix-slider-lb-prev { left: 0; }
+  .wix-slider-lb-next { right: 0; }
+}
+@media (max-width: 400px) {
+  .wix-person-portrait .wix-person-photo { width: 140px; height: 188px; }
+  .wix-person-facts { width: calc(100% - 132px); }
+}
+/* touch devices swipe the strip; the chevrons would only cover photos */
+@media (hover: none) and (max-width: 979px) {
+  .wix-slider-prev, .wix-slider-next { display: none; }
+}
+/* ======================= end PERSON PAGE block ======================= */
+
+/* ==========================================================================
+   HOME (/), FAMILY TREE (/family-tree), FAMILY INDEX (/family)
+   Owner: home/tree agent. Classes: .wix-home-*, .wix-tree-*, .wix-famidx-*
+   Measurements come from the original Wix captures (canvas-relative px).
+   ========================================================================== */
+
+/* ---------- Home: fluid stack below 980px, exact absolute layout at >= 980px ---------- */
+.wix-home-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 22px 18px 0;
+}
+.wix-home-stage > .wix-home-tree {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 50%;
+  width: max(100%, 600px);
+  transform: translateX(-50%);
+  pointer-events: none;
+  user-select: none;
+}
+.wix-home-tree img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 789 / 606; /* the original stretched the tree art into this box */
+  object-fit: fill;
+}
+.wix-home-stage > :not(.wix-home-tree) { position: relative; z-index: 1; }
+
+.wix-home-title {
+  margin: 0;
+  font: 400 clamp(26px, 7.4vw, 40px) / 1.1 Arial, Helvetica, sans-serif;
+  color: #000;
+  text-align: center;
+}
+/* Lulo is wider than its Montserrat stand-in: extra tracking restores the original 132px / 96px label widths */
+.wix-home-btn { width: 276px; max-width: 100%; padding: 0 0 0 0.25em; letter-spacing: 0.25em; }
+.wix-home-btn-tree { width: 231px; background: rgba(255, 255, 255, 0.71); }
+.wix-home-frame-link { display: block; line-height: 0; }
+.wix-home-frame { box-sizing: border-box; width: 192px; height: 271px; }
+.wix-home-frame > div { width: 170px; height: 249px; margin: 5px; }
+.wix-home-frame img.wix-home-portrait { width: 170px; height: 249px; max-width: none; object-fit: cover; }
+.wix-home-intro {
+  box-sizing: border-box;
+  width: 745px;
+  max-width: 100%;
+  min-height: 45px;
+  padding: 4px 8px;
+  background: rgba(240, 250, 255, 0.6);
+  font: 700 12px / 13.2px Arial, Helvetica, sans-serif;
+  color: #010101;
+}
+.wix-home-intro p, .wix-home-intro ul, .wix-home-intro ol { margin: 0; }
+.wix-home-intro p + p { margin-top: 13.2px; }
+.wix-home-intro a { color: inherit; text-decoration: underline; }
+.wix-home-stage > .wix-home-footer { align-self: flex-start; margin: 14px -18px 0; }
+.wix-home-footer .wix-footer-label { line-height: 22px; }
+
+@media (min-width: 980px) {
+  .wix-home-stage { display: block; height: 638px; padding: 0; }
+  .wix-home-stage > .wix-home-tree { left: 91px; top: -5px; width: 789px; transform: none; }
+  .wix-home-tree img { height: 606px; }
+  .wix-home-stage > .wix-home-title {
+    position: absolute; left: 138px; top: 24px;
+    font-size: 40px; line-height: 44px; white-space: nowrap; text-align: left;
+  }
+  .wix-home-stage > .wix-home-btn-meet { position: absolute; left: 343px; top: 86px; }
+  .wix-home-stage > .wix-home-frame-link { position: absolute; left: 385px; top: 139px; }
+  /* right padding keeps the original line breaks inside the 745px strip */
+  .wix-home-stage > .wix-home-intro { position: absolute; left: 115px; top: 419px; padding: 0 12px 0 0; }
+  .wix-home-stage > .wix-home-btn-tree { position: absolute; left: 365px; top: 506px; }
+  /* bottom-anchored: the one-line label lands at y=616 like the original, longer CMS text wraps upward */
+  .wix-home-stage > .wix-home-footer { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; }
+}
+
+/* ---------- Family tree: a 744-unit stage; --u is one original pixel, so phones scale it ---------- */
+.wix-tree-canvas { container-type: inline-size; }
+.wix-tree-inner {
+  --u: calc(100cqw / 744);
+  min-height: calc(850 * var(--u));
+  padding-bottom: calc(30 * var(--u));
+  background: #9db8b2 url("/wix/tree-bg.jpg") top center / 100% auto no-repeat;
+}
+.wix-tree-stage { position: relative; height: calc(580 * var(--u)); }
+.wix-tree-title {
+  position: absolute;
+  top: calc(50 * var(--u));
+  left: 0;
+  right: calc(3 * var(--u));
+  margin: 0;
+  text-align: center;
+  font-family: var(--font-proxima), Arial, sans-serif;
+  font-weight: 400;
+  font-size: calc(40 * var(--u));
+  line-height: 1.075;
+  color: var(--wix-heading);
+}
+.wix-tree-slot {
+  position: absolute;
+  left: calc(var(--x) * var(--u));
+  top: calc(var(--y) * var(--u));
+  width: calc(var(--w) * var(--u));
+  height: calc(var(--h) * var(--u));
+  display: block;
+  text-decoration: none;
+}
+.wix-tree-slot-flow { position: relative; left: auto; top: auto; flex: none; }
+.wix-tree-frame {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--wix-heading);
+  border-radius: calc(5 * var(--u));
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  /* the original's 1×100 gloss strip: slightly darker at the top, clear by 100px */
+  background-image: linear-gradient(rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0) calc(100 * var(--u)));
+  background-repeat: no-repeat;
+}
+.wix-tree-photo {
+  position: absolute;
+  left: calc(var(--px) * var(--u) - 1px);
+  top: calc(var(--py) * var(--u) - 1px);
+  width: calc(var(--pw) * var(--u));
+  height: calc(var(--ph) * var(--u));
+  overflow: hidden;
+}
+.wix-tree-photo img,
+.wix-tree-center-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+}
+.wix-tree-initials {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  background: #c9c9c9;
+  color: var(--wix-heading);
+  font: 700 calc(22 * var(--u)) / 1 Arial, Helvetica, sans-serif;
+}
+/* No labels at rest (the original had none); the name appears on hover / keyboard focus. */
+.wix-tree-name {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, 2px);
+  margin-top: 3px;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--wix-heading);
+  font: 700 11px / 1.2 Arial, Helvetica, sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.wix-tree-slot:hover .wix-tree-name,
+.wix-tree-slot:focus-visible .wix-tree-name { opacity: 1; transform: translate(-50%, 0); }
+.wix-tree-slot:focus-visible,
+.wix-tree-center:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.wix-tree-center {
+  position: absolute;
+  left: calc(var(--x) * var(--u));
+  top: calc(var(--y) * var(--u));
+  width: calc(var(--w) * var(--u));
+  height: calc(var(--h) * var(--u));
+  box-sizing: border-box;
+  display: block;
+  background: #fff;
+  border: max(1px, calc(2 * var(--u))) solid #000;
+}
+.wix-tree-center::after {
+  content: "";
+  position: absolute;
+  inset: calc(3 * var(--u));
+  border: 1px solid #000;
+  pointer-events: none;
+}
+.wix-tree-center-photo { position: absolute; inset: calc(9 * var(--u)); overflow: hidden; }
+
+.wix-tree-extra {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: calc(26 * var(--u));
+  padding: calc(6 * var(--u)) calc(24 * var(--u)) calc(22 * var(--u));
+}
+.wix-tree-family {
+  margin: calc(9 * var(--u)) 0 0;
+  padding-right: calc(10 * var(--u));
+  text-align: center;
+  font: 700 calc(34 * var(--u)) / 1.1 "Times New Roman", Times, serif;
+  color: var(--wix-heading);
+}
+/* Site settings → Footer text longer than a short family label: set it smaller so it still fits */
+.wix-tree-family-long {
+  padding: 0 calc(70 * var(--u));
+  font-size: max(12px, calc(19 * var(--u)));
+  line-height: 1.2;
+}
+.wix-tree-home { display: flex; justify-content: center; margin-top: calc(10.6 * var(--u)); }
+
+/* ---------- Family index ("Meet the Family") ---------- */
+.wix-famidx-canvas {
+  /* leaves art, washed out a little further so long lists stay readable */
+  background-image: linear-gradient(rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45)), url("/wix/leaves.png");
+  background-repeat: repeat, repeat-y;
+  background-position: top center;
+  background-size: auto, max(100%, 760px) auto;
+}
+.wix-famidx-body { padding: 8px 18px 0; }
+.wix-famidx-title { font-size: clamp(30px, 8vw, 40px); }
+.wix-famidx-root {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin: 10px auto 0;
+  text-align: center;
+  text-decoration: none;
+}
+.wix-famidx-root-frame img,
+.wix-famidx-root-frame .wix-famidx-blank { width: 132px; height: 193px; max-width: none; margin: 5px; }
+.wix-famidx-root-name { font-size: 24px; }
+.wix-famidx-root:hover .wix-famidx-root-name,
+.wix-famidx-line-head:hover .wix-h2,
+.wix-famidx-tile:hover .wix-famidx-tile-name { text-decoration: underline; }
+.wix-famidx-line { margin-top: 34px; }
+.wix-famidx-line-head { display: inline-flex; align-items: center; gap: 14px; text-decoration: none; }
+.wix-famidx-line-head .wix-h2 { font-size: clamp(22px, 6vw, 28px); }
+.wix-famidx-line-photo img,
+.wix-famidx-line-photo .wix-famidx-blank { width: 60px; height: 73px; max-width: none; }
+.wix-famidx-line-photo .wix-famidx-blank { font-size: 18px; }
+.wix-famidx-row { display: flex; flex-wrap: wrap; gap: 20px 22px; margin-top: 16px; }
+.wix-famidx-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 99px;
+  text-align: center;
+  text-decoration: none;
+}
+.wix-famidx-tile-photo img { width: 99px; height: 121px; max-width: none; }
+.wix-famidx-tile-name { margin-top: 8px; font-size: 15px; line-height: 1.2; overflow-wrap: anywhere; }
+.wix-famidx-img { object-fit: cover; }
+.wix-famidx-blank {
+  display: grid;
+  place-items: center;
+  background: #d5d5d5;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  color: var(--wix-heading);
+  font: 700 26px / 1 var(--font-proxima), Arial, sans-serif;
+  letter-spacing: 0.04em;
+}
+.wix-famidx-nav { margin-top: 56px; }
+.wix-famidx-nav + div { margin-top: 26px; }
+.wix-famidx-nav + div .wix-footer-label { line-height: 22px; }
+
+@media (min-width: 980px) {
+  .wix-famidx-body { padding: 8px 75px 0; }
+}
+/* ==================== end home / tree / family index block ==================== */
+
+/* =====================================================================================
+   GALLERY + CONTENT PAGES block (gallery, album, history, stories, not-found)
+   Self-contained: .wix-gallery-* and .wix-content-* only.
+   Geometry measured from the original Wix gallery/history captures.
+   ===================================================================================== */
+
+/* ---------- gallery page frame ---------- */
+.wix-gallery-page { padding-bottom: 18px; }
+.wix-gallery-top { display: flex; flex-direction: column; align-items: center; padding: 10px 16px 0; }
+.wix-gallery-title { margin-top: 4px; text-align: center; }
+.wix-gallery-filter { margin-top: 8px; text-align: center; font: 400 13px/18px Arial, Helvetica, sans-serif; color: var(--wix-muted); }
+.wix-gallery-filter .wix-text-link { white-space: nowrap; }
+.wix-gallery-filter .wix-text-link:hover { color: #000; }
+.wix-gallery-filter .wix-text-link.is-current { text-decoration: none; color: #000; cursor: default; }
+.wix-gallery-filter-dot { display: inline-block; padding: 0 6px; }
+.wix-gallery-body { margin-top: 9px; }
+.wix-gallery-empty { margin: 60px 0; text-align: center; font: 400 12px/1.6 Arial, Helvetica, sans-serif; color: #000; }
+
+/* 5 columns of 182x155 cover tiles, ~10px gutters (948px wide, centered on the canvas) */
+.wix-gallery-grid {
+  list-style: none;
+  margin: 0 auto;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(5, 182px);
+  column-gap: 9.5px;
+  row-gap: 10px;
+  width: 948px;
+}
+.wix-gallery-tile {
+  display: block;
+  width: 100%;
+  aspect-ratio: 182 / 155;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #f0faff;
+  overflow: hidden;
+  cursor: pointer;
+}
+.wix-gallery-tile img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; transition: opacity 0.3s; }
+.wix-gallery-tile:hover img { opacity: 0.82; }
+.wix-gallery-tile:focus-visible { outline: 2px solid var(--wix-pill); outline-offset: 2px; }
+
+/* "Show More" sits in a 32px row directly under the grid, as in the original */
+.wix-gallery-more-row { display: flex; align-items: center; justify-content: center; height: 32px; margin-top: 2px; }
+.wix-gallery-more { font-family: var(--font-proxima), Arial, sans-serif; font-size: 14px; color: #515e65; padding: 4px 8px; }
+.wix-gallery-more:hover { color: #000; }
+.wix-gallery-nav { display: flex; justify-content: center; margin-top: 31px; }
+.wix-gallery-page .wix-footer-label { margin-top: 3px; }
+/* a long CMS footer text runs under the centered pill, so give it air (the original one-liner sat 3px below) */
+.wix-gallery-long-footer .wix-footer-label { margin-top: 16px; }
+
+/* wrapping row of 133x133 thumbs (story photo strip) */
+.wix-gallery-thumbs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.wix-gallery-thumbs > li { width: 133px; }
+.wix-gallery-thumbs .wix-gallery-tile { aspect-ratio: 1; background: var(--wix-photo-bg); box-shadow: 0 0 3px rgba(0, 0, 0, 0.5); }
+
+@media (max-width: 979px) {
+  .wix-gallery-page .wix-footer-label { margin-top: 16px; }
+  .wix-gallery-grid { width: auto; margin: 0 16px; grid-template-columns: repeat(4, minmax(0, 1fr)); column-gap: 10px; }
+}
+@media (max-width: 719px) {
+  .wix-gallery-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+}
+@media (max-width: 480px) {
+  .wix-gallery-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .wix-gallery-thumbs > li { width: calc((100% - 20px) / 3); }
+}
+
+/* ---------- lightbox ---------- */
+.wix-gallery-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.92);
+  color: #fff;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.wix-gallery-lightbox-figure { margin: 0; max-width: calc(100vw - 160px); display: flex; flex-direction: column; align-items: center; }
+.wix-gallery-lightbox-img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 150px); object-fit: contain; background: #111; }
+.wix-gallery-lightbox-caption { margin-top: 12px; max-width: 640px; text-align: center; font-size: 13px; line-height: 1.5; color: #d9d9d9; }
+.wix-gallery-lightbox-caption p { margin: 0; }
+.wix-gallery-lightbox-title { font-size: 16px; color: #fff; }
+.wix-gallery-lightbox-year { color: #a9a9a9; }
+.wix-gallery-lightbox-count { margin: 8px 0 0; font-size: 11px; color: #8d8d8d; }
+.wix-gallery-lightbox-close,
+.wix-gallery-lightbox-arrow {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: none;
+  color: #fff;
+  opacity: 0.75;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.wix-gallery-lightbox-close:hover,
+.wix-gallery-lightbox-arrow:hover { opacity: 1; }
+.wix-gallery-lightbox-close:focus-visible,
+.wix-gallery-lightbox-arrow:focus-visible { outline: 1px solid #fff; outline-offset: 2px; opacity: 1; }
+.wix-gallery-lightbox-close { top: 14px; right: 14px; width: 44px; height: 44px; }
+.wix-gallery-lightbox-arrow { top: 50%; width: 60px; height: 90px; margin-top: -45px; }
+.wix-gallery-lightbox-prev { left: 8px; }
+.wix-gallery-lightbox-next { right: 8px; }
+@media (max-width: 719px) {
+  .wix-gallery-lightbox-figure { max-width: 100vw; }
+  .wix-gallery-lightbox-img { max-height: calc(100dvh - 190px); }
+  .wix-gallery-lightbox-caption { padding: 0 16px; }
+  .wix-gallery-lightbox-arrow { top: auto; bottom: 10px; margin-top: 0; width: 56px; height: 56px; }
+  .wix-gallery-lightbox-arrow svg { width: 14px; height: 24px; }
+  .wix-gallery-lightbox-prev { left: 16px; }
+  .wix-gallery-lightbox-next { right: 16px; }
+}
+
+/* ---------- content pages: history / stories / not-found ---------- */
+.wix-content-page { display: flex; flex-direction: column; padding-bottom: 19px; }
+.wix-content-main { flex: 1 0 auto; padding: 63px 76px 0; }
+/* "Family History": Arial 41px/45px, weight 400, black, at canvas x=76 y=63 */
+.wix-content-title { font: 400 41px/45px Arial, Helvetica, sans-serif; color: #000; margin: 0; overflow-wrap: anywhere; }
+.wix-content-nav { margin-top: 48px; }
+.wix-content-page .wix-footer-label { margin-top: 3px; }
+.wix-content-long-footer .wix-footer-label { margin-top: 16px; }
+
+/* History: two loose columns (text at x=85 and x=551, ~345px wide); the right column starts at y=82 beside the title */
+.wix-content-columns { width: 820px; max-width: 100%; margin-top: 19px; columns: 2; column-gap: 112px; }
+.wix-content-title-history { position: relative; top: -19px; margin-bottom: 90px; break-after: avoid; }
+.wix-content-entry { break-inside: avoid; padding-left: 9px; margin: 0 0 44px; }
+.wix-content-heading { font: 400 18px/20px Arial, Helvetica, sans-serif; color: #000; margin: 0 0 5px; }
+.wix-content-heading a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.wix-content-heading a:hover { color: var(--wix-pill); }
+.wix-content-meta { font: 400 12px/1.6 Arial, Helvetica, sans-serif; color: var(--wix-muted); margin: 0; }
+.wix-content-meta-link { color: inherit; text-decoration: underline; }
+.wix-content-excerpt,
+.wix-content-empty { font: 400 12px/1.6 Arial, Helvetica, sans-serif; color: #000; margin: 0; }
+.wix-content-columns .wix-content-empty { padding-left: 9px; }
+.wix-content-empty-stories { margin: 48px 0 0 9px; max-width: 640px; }
+.wix-content-figure { margin-top: 12px; }
+.wix-content-img { width: auto; max-width: 100%; height: auto; }
+.wix-content-figure .wix-content-img { width: 300px; }
+.wix-content-cover .wix-content-img { max-height: 520px; }
+.wix-content-people { font: 400 12px/1.6 Arial, Helvetica, sans-serif; color: var(--wix-muted); margin: 8px 0 0; }
+.wix-content-people .wix-text-link { font-size: 12px; }
+
+/* rich text: plain Arial paragraphs with generous leading, like the original text boxes */
+.wix-content-rich { font: 400 12px/1.6 Arial, Helvetica, sans-serif; color: #000; overflow-wrap: break-word; }
+.wix-content-rich-13 { font-size: 13px; }
+.wix-content-rich p { margin: 0 0 0.9em; }
+.wix-content-rich > :last-child { margin-bottom: 0; }
+.wix-content-rich a { color: inherit; text-decoration: underline; }
+.wix-content-rich h2, .wix-content-rich h3, .wix-content-rich h4 { font-weight: 400; color: #000; margin: 1.2em 0 0.4em; line-height: 1.2; }
+.wix-content-rich h2 { font-size: 18px; }
+.wix-content-rich h3 { font-size: 16px; }
+.wix-content-rich h4 { font-size: 14px; }
+.wix-content-rich ul, .wix-content-rich ol { margin: 0 0 0.9em; padding-left: 1.6em; }
+.wix-content-rich ul { list-style: disc; }
+.wix-content-rich ol { list-style: decimal; }
+.wix-content-rich blockquote { margin: 0 0 0.9em; padding-left: 12px; border-left: 2px solid #c8c8c8; font-style: italic; }
+.wix-content-rich img { max-width: 100%; height: auto; }
+
+/* Stories list */
+.wix-content-list { list-style: none; margin: 48px 0 0; padding: 0 0 0 9px; max-width: 700px; }
+.wix-content-story { display: flex; gap: 20px; align-items: flex-start; margin: 0 0 32px; }
+.wix-content-story-thumb { flex: none; display: block; width: 133px; height: 133px; }
+.wix-content-story-thumb img { width: 100%; height: 100%; }
+.wix-content-story-text { min-width: 0; flex: 1; }
+.wix-content-story-text .wix-content-excerpt { margin-top: 6px; }
+
+/* Story page */
+.wix-content-article > :not(.wix-content-title) { margin-left: 9px; }
+.wix-content-byline { margin-top: 10px; }
+.wix-content-cover { margin-top: 26px; max-width: 640px; }
+.wix-content-body { margin-top: 26px; max-width: 640px; }
+.wix-content-gallery { margin-top: 30px; max-width: 705px; }
+.wix-content-people-story { margin-top: 26px; }
+.wix-content-back { margin-top: 30px; margin-bottom: 0; }
+
+@media (max-width: 979px) {
+  .wix-content-page .wix-footer-label { margin-top: 16px; }
+  .wix-content-main { padding: 32px 20px 0; }
+  .wix-content-title { font-size: 34px; line-height: 40px; }
+  .wix-content-columns { width: auto; columns: 1; margin-top: 0; }
+  .wix-content-title-history { top: 0; margin-bottom: 32px; }
+  .wix-content-entry, .wix-content-columns .wix-content-empty { padding-left: 0; }
+  .wix-content-list { padding-left: 0; margin-top: 32px; }
+  .wix-content-empty-stories { margin: 32px 0 0; }
+  .wix-content-article > :not(.wix-content-title) { margin-left: 0; }
+  .wix-content-story { gap: 16px; }
+}
+@media (max-width: 420px) {
+  .wix-content-story-thumb { width: 100px; height: 100px; }
+}
+/* ======================= end GALLERY + CONTENT PAGES block ======================= */

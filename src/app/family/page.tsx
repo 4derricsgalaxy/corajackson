@@ -1,60 +1,115 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PersonCard } from "@/components/family/PersonCard";
 import { CmsImage } from "@/components/ui/CmsImage";
-import { descendantCount, getFamilyGraph } from "@/lib/content/queries";
-import { lineColor } from "@/lib/tree-layout";
+import { WixCanvas } from "@/components/wix/WixCanvas";
+import { FooterLabel, PageNav } from "@/components/wix/WixNav";
+import { initialsOf } from "@/components/wix/tree/TreeFrame";
+import { editableField } from "@/lib/cms/sdk";
+import { getFamilyGraph, getSettings } from "@/lib/content/queries";
+import type { TreeNode } from "@/lib/content/types";
 
 export const revalidate = 3600;
-export const metadata: Metadata = { title: "Family Lines", description: "The eight children of Cora Mae Jackson and their descendants." };
+export const metadata: Metadata = {
+  title: "Meet the Family",
+  description: "Cora Mae Jackson, her children, and every generation since — grouped by family line.",
+};
 
-export default async function FamilyIndexPage() {
-  const graph = await getFamilyGraph();
-  const cora = graph.root;
+const shortName = (m: TreeNode) => m.nickname ?? m.title.split(" ")[0];
+
+/** Everyone below a line's head: children first, then grandchildren, then the next generation… */
+function descendantsByGeneration(head: TreeNode): TreeNode[] {
+  const out: TreeNode[] = [];
+  let level = head.children;
+  while (level.length) {
+    out.push(...level);
+    level = level.flatMap((m) => m.children);
+  }
+  return out;
+}
+
+function Portrait({ member, width, height, priority }: { member: TreeNode; width: number; height: number; priority?: boolean }) {
+  return member.portrait?.url ? (
+    <CmsImage
+      src={member.portrait}
+      alt={member.title}
+      width={width}
+      height={height}
+      priority={priority}
+      sizes={`${width}px`}
+      className="wix-photo wix-famidx-img"
+    />
+  ) : (
+    <span className="wix-famidx-blank" style={{ width, height }} aria-hidden>
+      {initialsOf(member.title)}
+    </span>
+  );
+}
+
+function PersonTile({ member }: { member: TreeNode }) {
   return (
-    <div className="mx-auto max-w-7xl px-5 pb-20 pt-8 md:px-8">
-      <p className="eyebrow">Meet the family</p>
-      <h1 className="mt-3 max-w-3xl font-display text-5xl leading-[1] md:text-6xl">Eight children, each the start of a <em className="text-gold">line.</em></h1>
+    <Link href={`/family/${member.slug}`} title={member.title} className="wix-famidx-tile">
+      <span className="wix-famidx-tile-photo" {...editableField(member._id, "portrait")}>
+        <Portrait member={member} width={99} height={121} />
+      </span>
+      <span className="wix-child-name wix-famidx-tile-name" {...editableField(member._id, member.nickname ? "nickname" : "title")}>
+        {shortName(member)}
+      </span>
+    </Link>
+  );
+}
 
-      {cora && (
-        <Link href={`/family/${cora.slug}`} className="mt-12 grid items-center gap-6 rounded-xl border border-line bg-paper-2/60 p-5 transition hover:border-gold md:grid-cols-[160px_1fr_auto]">
-          <div className="frame w-32">
-            <CmsImage src={cora.portrait} alt={cora.title} width={128} height={160} className="h-full w-full object-cover" />
-          </div>
-          <div>
-            <p className="eyebrow">Where it begins</p>
-            <p className="mt-1 font-display text-3xl">{cora.title}</p>
-            {cora.shortBio && <p className="mt-2 max-w-xl text-ink-2">{cora.shortBio}</p>}
-          </div>
-          <span className="text-oak link-underline">Her page →</span>
-        </Link>
-      )}
+/**
+ * Meet the Family — the original Wix site had no index page; this one is drawn in the same
+ * style (white canvas, leaves, Proxima headings, shadowed photos) and lists everyone by family line.
+ */
+export default async function FamilyIndexPage() {
+  const [settings, graph] = await Promise.all([getSettings(), getFamilyGraph()]);
+  const cora = graph.root;
 
-      <div className="mt-16 space-y-20">
-        {graph.lines.map((line, i) => {
-          const color = lineColor(i, line.accentColor);
+  return (
+    <WixCanvas minHeight={857} className="wix-famidx-canvas">
+      <div className="wix-famidx-body">
+        <h1 className="wix-h1 wix-famidx-title">Meet the Family</h1>
+
+        {cora && (
+          <Link href={`/family/${cora.slug}`} title={cora.title} className="wix-famidx-root">
+            <span className="wix-frame wix-famidx-root-frame" {...editableField(cora._id, "portrait")}>
+              <Portrait member={cora} width={132} height={193} priority />
+            </span>
+            <span className="wix-h2 wix-famidx-root-name" {...editableField(cora._id, "title")}>
+              {cora.title}
+            </span>
+          </Link>
+        )}
+
+        {graph.lines.map((line) => {
+          const people = descendantsByGeneration(line);
           return (
-            <section key={line._id} id={line.slug} className="grid gap-8 md:grid-cols-[minmax(240px,320px)_1fr]">
-              <div>
-                <PersonCard person={line} color={color} index={0} />
-                <Link href={`/family/${line.slug}`} className="mt-4 inline-flex items-center gap-2 text-sm text-oak link-underline">
-                  Explore {line.nickname ?? line.title.split(" ")[0]}&apos;s line ({descendantCount(line)}) →
-                </Link>
-              </div>
-              <div>
-                <div className="mb-4 flex items-center gap-3">
-                  <span className="h-px flex-1" style={{ background: `linear-gradient(90deg, ${color}, transparent)` }} />
-                  <p className="eyebrow">{line.children.length ? `${line.children.length} children` : "Line"}</p>
+            <section key={line._id} id={line.slug} className="wix-famidx-line">
+              <Link href={`/family/${line.slug}`} className="wix-famidx-line-head">
+                <span className="wix-famidx-line-photo" {...editableField(line._id, "portrait")}>
+                  <Portrait member={line} width={60} height={73} />
+                </span>
+                <h2 className="wix-h2" {...editableField(line._id, "title")}>
+                  {line.title}
+                </h2>
+              </Link>
+              {people.length > 0 && (
+                <div className="wix-famidx-row">
+                  {people.map((m) => (
+                    <PersonTile key={m._id} member={m} />
+                  ))}
                 </div>
-                <div className="grid grid-cols-3 gap-x-4 gap-y-8 sm:grid-cols-4 lg:grid-cols-5">
-                  {line.children.map((c, j) => <PersonCard key={c._id} person={c} size="sm" index={j} />)}
-                  {line.children.length === 0 && <p className="col-span-full text-sm text-ink-3">No children recorded yet. Add them in the CMS under Family Members with {line.title} as parent.</p>}
-                </div>
-              </div>
+              )}
             </section>
           );
         })}
       </div>
-    </div>
+
+      <PageNav className="wix-famidx-nav" />
+      <div {...(settings._id ? editableField(settings._id, "footerText") : {})}>
+        <FooterLabel text={settings.footerText} />
+      </div>
+    </WixCanvas>
   );
 }

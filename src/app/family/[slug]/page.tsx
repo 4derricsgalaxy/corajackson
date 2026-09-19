@@ -1,15 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Breadcrumbs } from "@/components/ui/Breadcrumbs";
+import { clsx } from "clsx";
 import { RichText } from "@/components/ui/RichText";
-import { CmsImage } from "@/components/ui/CmsImage";
-import { PersonCard } from "@/components/family/PersonCard";
-import { PhotoGrid } from "@/components/family/PhotoGrid";
-import { ancestorsOf, descendantCount, getFamilyGraph, getPhotos, getStories, siblingsOf } from "@/lib/content/queries";
-import { lineColor } from "@/lib/tree-layout";
-import { FamilyTreeExplorer } from "@/components/tree/FamilyTreeExplorer";
-import { buildScene } from "@/lib/scene";
+import { WixCanvas } from "@/components/wix/WixCanvas";
+import { FooterLabel, PageNav } from "@/components/wix/WixNav";
+import { PhotoSlider, type SliderPhoto } from "@/components/wix/PhotoSlider";
+import { PersonChildren } from "@/components/wix/person/PersonChildren";
+import { PersonFacts } from "@/components/wix/person/PersonFacts";
+import { PersonPortrait } from "@/components/wix/person/PersonPortrait";
+import { firstName } from "@/components/wix/person/parent-note";
+import { editableField } from "@/lib/cms/sdk";
+import { fullSrc } from "@/lib/content/image";
+import { getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
+import type { RichContent } from "@/lib/content/types";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -27,149 +31,126 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return { title: m.title, description: m.shortBio ?? `${m.title}, part of the Cora Mae Jackson family.` };
 }
 
-const GEN_LABEL = ["Matriarch", "Child of Cora", "Grandchild of Cora", "Great-grandchild of Cora", "Great-great-grandchild of Cora"];
-
+/**
+ * ONE template for every family member, modeled on the original Wix "Joanne Jackson" page:
+ * name, portrait + fact pairs, italic quote, children grouped by their other parent,
+ * the "Memories" photo slider, and the home / Family Tree nav. Everything comes from the CMS.
+ */
 export default async function PersonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [graph, photos, stories] = await Promise.all([getFamilyGraph(), getPhotos(), getStories()]);
+  const [graph, photos, stories, settings] = await Promise.all([getFamilyGraph(), getPhotos(), getStories(), getSettings()]);
   const person = graph.bySlug.get(slug);
   if (!person) notFound();
 
-  const ancestors = ancestorsOf(person, graph);
-  const { prev, next } = siblingsOf(person, graph);
-  const lineIndex = graph.lines.findIndex((l) => l.slug === person.lineSlug);
-  const color = person.depth === 0 ? "#c39a4a" : lineColor(lineIndex, graph.lines[lineIndex]?.accentColor);
-  const lineHead = person.lineSlug ? graph.bySlug.get(person.lineSlug) : undefined;
+  // Memories: the member's own gallery, photos tagged with them, and (for Cora and her children) their line's album.
+  const tagged = photos.filter((p) => p.peopleIds?.includes(person._id) || (person.depth <= 1 && p.lineageId === person._id));
+  const seen = new Set<string>();
+  const memories: SliderPhoto[] = [];
+  const add = (key: string, image: { url: string; srcset?: string; alt?: string | null; position?: string; originalUrl?: string }, caption?: string) => {
+    if (!image?.url || seen.has(image.url)) return;
+    seen.add(image.url);
+    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position });
+  };
+  (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, img.alt || undefined));
+  tagged.forEach((p) => add(p._id, p.image, p.caption || p.title || undefined));
 
-  const idSet = new Set([person._id]);
-  const personPhotos = photos.filter((p) => p.peopleIds?.some((id) => idSet.has(id)) || (person.depth <= 1 && p.lineageId === person._id));
-  const galleryImages = [...(person.gallery ?? []).map((img, i) => ({ _id: `g${i}`, image: img, title: person.title, caption: "" })), ...personPhotos];
   const personStories = stories.filter((s) => s.authorId === person._id || s.peopleIds?.includes(person._id));
-  const descendants = descendantCount(person);
 
-  // sub-tree scene: this person's line only (or whole tree for Cora)
-  const scene = buildScene(graph);
-  const lineSlug = person.lineSlug ?? (person.depth === 0 ? undefined : person.slug);
-  const subNodes = person.depth === 0 ? scene.nodes : scene.nodes.filter((n) => n.generation === 0 || n.lineSlug === lineSlug);
+  // The floating tab in the gray surround links UP one level ("Home" for Cora and her children).
+  const parent = person.parentId ? graph.byId.get(person.parentId) : undefined;
+  const up = parent && parent.depth > 0 ? { href: `/family/${parent.slug}`, label: firstName(parent) } : { href: "/", label: "Home" };
+
+  const hasBio = Array.isArray(person.bio) ? person.bio.length > 0 : Boolean(person.bio);
+  // Joanne's quote ran ~400 characters in a 185px column; much longer bios get a wider measure so the page grows gracefully.
+  const quoteClass = clsx("wix-person-quote", richTextLength(hasBio ? person.bio : person.shortBio) > 560 && "wix-person-quote-wide");
 
   return (
-    <article>
-      {/* hero */}
-      <header className="relative mx-auto max-w-7xl px-5 pt-6 md:px-8">
-        <Breadcrumbs items={[{ href: "/", label: "Home" }, { href: "/family", label: "Family" }, ...ancestors.map((a) => ({ href: `/family/${a.slug}`, label: a.depth === 0 ? a.title.split(" ")[0] : a.nickname ?? a.title.split(" ")[0] })), { label: person.nickname ?? person.title.split(" ")[0] }]} />
-        <div className="mt-8 grid gap-10 md:grid-cols-12 md:items-end">
-          <div className="md:col-span-4 lg:col-span-4">
-            <div className="frame rise rise-1 mx-auto max-w-sm rotate-[-1.5deg]">
-              <CmsImage src={person.portrait} alt={person.title} width={560} height={720} priority sizes="(max-width: 768px) 80vw, 30vw" className="h-full w-full object-cover" />
-              <span className="absolute -left-1 top-6 h-24 w-1.5" style={{ background: color }} />
+    <div className="wix-person-wrap">
+      <Link href={up.href} className="wix-side-tab wix-person-side-tab">{up.label}</Link>
+
+      <WixCanvas minHeight={560} className="wix-person">
+        <article className="wix-person-body">
+          {/* page art: the member's hero image if the CMS has one, else the original autumn leaves */}
+          {person.heroImage ? (
+            // eslint-disable-next-line @next/next/no-img-element -- CMS page art, straight from the media CDN
+            <img
+              src={person.heroImage.url}
+              srcSet={person.heroImage.srcset}
+              sizes="(max-width: 980px) 100vw, 980px"
+              alt=""
+              aria-hidden
+              className="wix-canvas-art wix-person-art wix-person-art-hero"
+              style={person.heroImage.position ? { objectPosition: person.heroImage.position } : undefined}
+              {...editableField(person._id, "heroImage")}
+            />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element -- static decorative artwork
+            <img src="/wix/leaves.png" alt="" aria-hidden className="wix-canvas-art wix-person-art" />
+          )}
+          <div className="wix-person-cols">
+            <div className="wix-person-left">
+              <h1 className="wix-h1 wix-person-title" {...editableField(person._id, "title")}>{person.title}</h1>
+              {/* portrait + facts float; the quote sits under the portrait and wraps around a tall fact column */}
+              <div className="wix-person-bio">
+                <div className="wix-person-portrait" {...editableField(person._id, "portrait")}>
+                  <PersonPortrait image={person.portrait} name={person.title} width={160} height={215} priority />
+                </div>
+                <PersonFacts person={person} />
+                {hasBio ? (
+                  <div className={quoteClass} {...editableField(person._id, "bio")}>
+                    <RichText content={person.bio} className="wix-quote" />
+                  </div>
+                ) : person.shortBio ? (
+                  <div className={clsx(quoteClass, "wix-quote")} {...editableField(person._id, "shortBio")}>
+                    <p>{person.shortBio}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="wix-person-right">
+              <PersonChildren person={person} />
             </div>
           </div>
-          <div className="md:col-span-8">
-            <p className="eyebrow rise rise-1" style={{ color }}>{GEN_LABEL[person.depth] ?? "Family"}{lineHead && person.depth > 1 ? ` · ${lineHead.nickname ?? lineHead.title.split(" ")[0]}'s line` : ""}</p>
-            <h1 className="rise rise-2 mt-3 font-display text-[clamp(2.6rem,6vw,5.2rem)] leading-[0.95]">{person.title}</h1>
-            {person.nickname && person.nickname !== person.title && <p className="rise rise-2 mt-2 font-display text-2xl italic text-ink-3">“{person.nickname}”</p>}
-            <dl className="rise rise-3 mt-8 grid grid-cols-2 gap-x-8 gap-y-4 border-t border-line pt-6 sm:grid-cols-4">
-              {person.birthDate && <Fact label="Born" value={formatDate(person.birthDate)} />}
-              {person.deathDate && <Fact label="Passed" value={formatDate(person.deathDate)} />}
-              {person.birthplace && <Fact label="Birthplace" value={person.birthplace} />}
-              {person.residence && <Fact label="Home" value={person.residence} />}
-              {person.spouse && <Fact label="Spouse" value={person.spouse} />}
-              {person.parentNote && <Fact label="Family note" value={person.parentNote} />}
-              {person.occupation && <Fact label="Work / Service" value={person.occupation} />}
-              {person.children.length > 0 && <Fact label="Children" value={String(person.children.length)} />}
-              {descendants > person.children.length && <Fact label="Descendants" value={String(descendants)} />}
-            </dl>
-          </div>
-        </div>
-      </header>
 
-      {/* body */}
-      <div className="mx-auto mt-16 grid max-w-7xl gap-14 px-5 md:grid-cols-12 md:px-8">
-        <div className="md:col-span-7">
-          {person.bio ? <RichText content={person.bio} /> : person.shortBio ? <p className="prose-heirloom">{person.shortBio}</p> : (
-            <p className="rounded-md border border-dashed border-line p-6 text-sm text-ink-3">No biography has been written for {person.title} yet. Family members can add one in the CMS under Family Members → {person.title} → Biography.</p>
-          )}
-
-          {personStories.length > 0 && (
-            <section className="mt-16">
-              <p className="eyebrow mb-4">Stories</p>
-              <ul className="divide-y divide-line border-y border-line">
-                {personStories.map((s) => (
-                  <li key={s._id}><Link href={`/stories/${s.slug}`} className="group block py-4"><p className="font-display text-xl group-hover:text-gold">{s.title}</p>{s.excerpt && <p className="mt-1 text-sm text-ink-3">{s.excerpt}</p>}</Link></li>
-                ))}
-              </ul>
+          {memories.length > 0 && (
+            <section className="wix-person-memories" aria-labelledby="wix-person-memories-h">
+              <h2 id="wix-person-memories-h" className="wix-strong wix-person-memories-h">Memories:</h2>
+              <PhotoSlider photos={memories} label={`Photos of ${person.title}`} />
             </section>
           )}
+
+          <div className="wix-person-navband">
+            {personStories.length > 0 && (
+              <section className="wix-person-stories" aria-labelledby="wix-person-stories-h">
+                <h2 id="wix-person-stories-h" className="wix-strong">Stories:</h2>
+                <ul>
+                  {personStories.map((s) => (
+                    <li key={s._id}><Link href={`/stories/${s.slug}`} className="wix-text-link">{s.title}</Link></li>
+                  ))}
+                </ul>
+              </section>
+            )}
+            <PageNav className="wix-person-nav" />
+          </div>
+        </article>
+
+        <div className="wix-person-footer">
+          <FooterLabel text={settings.footerText} />
         </div>
-
-        <aside className="md:col-span-5">
-          {ancestors.length > 0 && (
-            <div className="rounded-lg border border-line p-5">
-              <p className="eyebrow mb-3">Lineage</p>
-              <ol className="space-y-2">
-                {[...ancestors, person].map((a, i) => (
-                  <li key={a._id} className="flex items-center gap-3" style={{ paddingLeft: i * 14 }}>
-                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: i === ancestors.length ? color : "var(--ink-3)" }} />
-                    {i === ancestors.length ? <span>{a.title}</span> : <Link href={`/family/${a.slug}`} className="link-underline text-ink-2">{a.title}</Link>}
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-          <div className="mt-4 flex items-stretch gap-2">
-            {prev ? <Link href={`/family/${prev.slug}`} className="flex-1 rounded-lg border border-line p-4 text-sm transition hover:border-gold"><span className="eyebrow block">← Sibling</span><span className="mt-1 block">{prev.title}</span></Link> : <span className="flex-1" />}
-            {next ? <Link href={`/family/${next.slug}`} className="flex-1 rounded-lg border border-line p-4 text-right text-sm transition hover:border-gold"><span className="eyebrow block">Sibling →</span><span className="mt-1 block">{next.title}</span></Link> : <span className="flex-1" />}
-          </div>
-          <Link href={`/family-tree`} className="mt-4 flex items-center justify-between rounded-lg bg-ink px-5 py-4 text-paper transition hover:bg-oak">
-            <span>See {person.nickname ?? person.title.split(" ")[0]} on the living tree</span><span>→</span>
-          </Link>
-        </aside>
-      </div>
-
-      {/* children */}
-      {person.children.length > 0 && (
-        <section className="mx-auto mt-24 max-w-7xl px-5 md:px-8">
-          <div className="mb-8 flex items-end justify-between">
-            <div>
-              <p className="eyebrow">{person.depth === 0 ? "Her children" : "Children"}</p>
-              <h2 className="mt-2 font-display text-4xl">{person.children.length === 1 ? "One child" : `${person.children.length} children`}{descendants > person.children.length ? `, ${descendants} descendants` : ""}</h2>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-4">
-            {person.children.map((c, i) => <PersonCard key={c._id} person={c} color={person.depth === 0 ? lineColor(i, c.accentColor) : undefined} index={i} />)}
-          </div>
-        </section>
-      )}
-
-      {/* line explorer */}
-      {subNodes.length > 2 && (
-        <section className="mx-auto mt-24 max-w-[1500px] px-4 md:px-6">
-          <p className="eyebrow mb-2 px-1">{person.depth === 0 ? "The whole tree" : `${lineHead?.nickname ?? lineHead?.title.split(" ")[0] ?? person.title}'s branch`}</p>
-          <FamilyTreeExplorer nodes={subNodes} lines={scene.lines.filter((l) => person.depth === 0 || l.slug === lineSlug)} initialSelected={person._id} />
-        </section>
-      )}
-
-      {/* photos */}
-      {galleryImages.length > 0 && (
-        <section className="mx-auto mt-24 max-w-7xl px-5 md:px-8">
-          <div className="mb-8 flex items-end justify-between">
-            <div><p className="eyebrow">Photographs</p><h2 className="mt-2 font-display text-4xl">{galleryImages.length} {galleryImages.length === 1 ? "photo" : "photos"}</h2></div>
-            {lineHead && <Link href={`/gallery/${lineHead.slug}`} className="link-underline text-sm text-ink-2">Full album →</Link>}
-          </div>
-          <PhotoGrid photos={galleryImages} pageSize={12} />
-        </section>
-      )}
-    </article>
+      </WixCanvas>
+    </div>
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
-  return (<div><dt className="eyebrow">{label}</dt><dd className="mt-1 text-lg">{value}</dd></div>);
-}
-
-function formatDate(iso: string) {
-  if (/^\d{4}$/.test(iso)) return iso;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric", timeZone: "UTC" });
+/** Rough character count of Portable Text blocks or a legacy HTML/plain string. */
+function richTextLength(content?: RichContent | null): number {
+  if (!content) return 0;
+  if (typeof content === "string") return content.replace(/<[^>]*>/g, "").length;
+  let n = 0;
+  for (const block of content) {
+    const children = (block as { children?: unknown })?.children;
+    if (Array.isArray(children)) for (const c of children) n += typeof (c as { text?: unknown })?.text === "string" ? (c as { text: string }).text.length : 0;
+  }
+  return n;
 }
