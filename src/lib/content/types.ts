@@ -24,6 +24,8 @@ export interface FamilyMember {
   parentId?: string | null;
   lineageId?: string | null;
   spouse?: string;
+  /** Spouses / co-parents with a photo; matched by name to the children's `parentNote` and to `spouse`. */
+  partners?: Partner[];
   parentNote?: string;
   birthDate?: string;
   deathDate?: string;
@@ -41,6 +43,11 @@ export interface FamilyMember {
   sortOrder?: number | string;
   featured?: boolean;
   published?: boolean;
+}
+
+export interface Partner {
+  name: string;
+  photo?: SiteImage;
 }
 
 export interface Story {

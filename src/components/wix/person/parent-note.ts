@@ -80,6 +80,9 @@ export function groupByParentNote<T extends { parentNote?: string }>(children: T
   return out;
 }
 
+/** Loose name key so "Angela Gooden" matches "angela  gooden" typed in another field. */
+export const nameKey = (name: string) => name.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
 export function firstName(person: { title: string; nickname?: string }): string {
   return person.nickname ?? person.title.split(" ")[0];
 }

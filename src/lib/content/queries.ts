@@ -2,7 +2,7 @@ import { cache } from "react";
 import { site } from "../cms/client";
 import { loadLocalContent } from "../data/local";
 import { fromCms } from "./image";
-import { TYPES, type FamilyMember, type HistoryEntry, type Photo, type SiteSettings, type Story, type TreeNode } from "./types";
+import { TYPES, type FamilyMember, type HistoryEntry, type Partner, type Photo, type SiteSettings, type Story, type TreeNode } from "./types";
 
 type Doc = Record<string, unknown> & { _id: string; _type?: string; _order?: string };
 
@@ -16,6 +16,14 @@ const refId = (v: unknown): string | null => {
 };
 const refIds = (v: unknown): string[] => (Array.isArray(v) ? v.map(refId).filter((x): x is string => Boolean(x)) : []);
 const images = (v: unknown) => (Array.isArray(v) ? v.map(fromCms).filter((x): x is NonNullable<typeof x> => Boolean(x)) : undefined);
+const partners = (v: unknown): Partner[] | undefined =>
+  Array.isArray(v)
+    ? v.flatMap((p) => {
+        const row = (p ?? {}) as Record<string, unknown>;
+        const name = str(row.name);
+        return name ? [{ name, photo: fromCms(row.photo) }] : [];
+      })
+    : undefined;
 const rich = (v: unknown) => (Array.isArray(v) ? v : str(v));
 
 async function fetchAll(type: string, include: string[] = []): Promise<Doc[]> {
@@ -41,6 +49,7 @@ const toMember = (d: Doc): FamilyMember => ({
   parentId: refId(d.parent),
   lineageId: refId(d.lineage),
   spouse: str(d.spouse),
+  partners: partners(d.partners),
   parentNote: str(d.parentNote),
   birthDate: str(d.birthDate),
   deathDate: str(d.deathDate),

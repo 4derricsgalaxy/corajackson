@@ -322,6 +322,22 @@ body {
 .wix-person-note-line b { font-size: 14px; }
 .wix-person-note-line + .wix-person-note-line b { font-size: 13px; }
 
+/* the spouse / other parent's small photo sits in the gutter left of that group's children */
+.wix-person-group-body { position: relative; }
+.wix-person-partner {
+  position: absolute;
+  left: 6px;
+  top: 9px;
+  width: 74px;
+  height: 84px;
+  border: 3px solid #000;
+  background: #000;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+}
+.wix-person-partner img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+.wix-person-nokids { margin: 9px 0 0 94px; min-height: 100px; display: flex; align-items: center; font: 18px/1.2 var(--font-proxima), Arial, sans-serif; color: #222; }
+
 .wix-person-kids {
   list-style: none;
   display: grid;
@@ -539,6 +555,8 @@ body {
   .wix-person-children-h + .wix-person-group { margin-top: 0; }
   .wix-person-group { margin-bottom: 16px; }
   .wix-person-kids { margin-left: 0; }
+  .wix-person-partner { position: static; display: block; margin: 8px 0 12px; }
+  .wix-person-nokids { margin-left: 0; min-height: 0; }
   .wix-person-kids > li:nth-child(3n + 1) .wix-person-kid::after {
     left: -16px;
     -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px);

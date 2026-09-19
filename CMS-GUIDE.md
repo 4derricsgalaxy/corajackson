@@ -12,6 +12,7 @@ Everything on the site comes from five collections in Snackbox (snackboxcms.com 
    - **Generation**: 1 for Cora's children, 2 for grandchildren, 3 for great-grandchildren, 4 for great-great-grandchildren.
    - **Portrait**: upload or pick from the media library. A vertical (4:5) photo looks best.
    - **Family tree photo**: the picture in this person's frame on the Family Tree page (the original site used childhood photos there). Leave it empty and the tree shows the Portrait.
+   - **Spouses & partners (photos)**: one entry per spouse or co-parent of this person — name plus a small photo. Type the name exactly as it appears in the children's *Other parent* note (e.g. `Angela Gooden`); the photo then shows beside that group of children, in list order. Someone listed here with no children on the site gets a "No Children" block (status comes from the *Spouse / partner* field).
    - **Banner image**: the faded background behind this person's page. Leave it empty for the autumn leaves.
    - **Short Bio**: one or two sentences shown on cards and in the tree panel.
    - **Biography**: the full story (rich text).
