@@ -20,6 +20,8 @@ export const initialsOf = (name: string) =>
  */
 export function TreeFrame({ member, slot, inFlow }: { member: TreeNode; slot: TreeSlot; inFlow?: boolean }) {
   const label = member.nickname ?? member.title.split(" ")[0];
+  // the tree has its own photo (the original used childhood pictures); without one it shows the portrait
+  const photo = member.treePhoto?.url ? member.treePhoto : member.portrait;
   const vars = {
     "--x": slot.frame.x,
     "--y": slot.frame.y,
@@ -39,9 +41,9 @@ export function TreeFrame({ member, slot, inFlow }: { member: TreeNode; slot: Tr
       style={vars}
     >
       <span className="wix-tree-frame" style={{ backgroundColor: slot.color }}>
-        <span className="wix-tree-photo" {...editableField(member._id, "portrait")}>
-          {member.portrait?.url ? (
-            <CmsImage src={member.portrait} alt={member.title} width={slot.photo.w * 2} height={slot.photo.h * 2} sizes={`${slot.photo.w}px`} />
+        <span className="wix-tree-photo" {...editableField(member._id, member.treePhoto?.url ? "treePhoto" : "portrait")}>
+          {photo?.url ? (
+            <CmsImage src={photo} alt={member.title} width={slot.photo.w * 2} height={slot.photo.h * 2} sizes={`${slot.photo.w}px`} />
           ) : (
             <span className="wix-tree-initials" aria-hidden>
               {initialsOf(member.title)}

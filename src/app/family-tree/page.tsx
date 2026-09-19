@@ -24,6 +24,7 @@ export default async function FamilyTreePage() {
   const cora = graph.root;
   const { placed, extra } = assignSlots(graph.lines);
   const familyText = footerLabelText(settings.footerText);
+  const coraPhoto = cora?.treePhoto?.url ? cora.treePhoto : cora?.portrait;
   const centerVars = {
     "--x": TREE_CENTER.x,
     "--y": TREE_CENTER.y,
@@ -43,9 +44,9 @@ export default async function FamilyTreePage() {
 
           {cora && (
             <Link href={`/family/${cora.slug}`} title={cora.title} aria-label={cora.title} className="wix-tree-center" style={centerVars}>
-              <span className="wix-tree-center-photo" {...editableField(cora._id, "portrait")}>
-                {cora.portrait?.url ? (
-                  <CmsImage src={cora.portrait} alt={cora.title} width={TREE_CENTER.photoW * 2} height={TREE_CENTER.photoH * 2} priority sizes={`${TREE_CENTER.photoW}px`} />
+              <span className="wix-tree-center-photo" {...editableField(cora._id, cora.treePhoto?.url ? "treePhoto" : "portrait")}>
+                {coraPhoto?.url ? (
+                  <CmsImage src={coraPhoto} alt={cora.title} width={TREE_CENTER.photoW * 2} height={TREE_CENTER.photoH * 2} priority sizes={`${TREE_CENTER.photoW}px`} />
                 ) : (
                   <span className="wix-tree-initials" aria-hidden>
                     {initialsOf(cora.title)}

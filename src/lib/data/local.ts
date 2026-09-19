@@ -24,7 +24,7 @@ export function loadLocalContent(): LocalContent {
   const raw = JSON.parse(fs.readFileSync(SEED_FILE, "utf8")) as Record<string, unknown>;
   const img = (v: unknown, alt?: string) => fromWix(v, alt);
   const imgs = (v: unknown) => (Array.isArray(v) ? v.map((x) => fromWix(x)).filter(Boolean) as FamilyMember["gallery"] : undefined);
-  const members = ((raw.members as Record<string, unknown>[]) ?? []).map((m) => ({ ...m, portrait: img(m.portrait, m.title as string), heroImage: img(m.heroImage), gallery: imgs(m.gallery) })) as unknown as FamilyMember[];
+  const members = ((raw.members as Record<string, unknown>[]) ?? []).map((m) => ({ ...m, portrait: img(m.portrait, m.title as string), treePhoto: img(m.treePhoto, m.title as string), heroImage: img(m.heroImage), gallery: imgs(m.gallery) })) as unknown as FamilyMember[];
   const photos = ((raw.photos as Record<string, unknown>[]) ?? []).map((p) => ({ ...p, image: img(p.image, (p.caption ?? p.title) as string) })).filter((p) => p.image) as unknown as Photo[];
   const stories = ((raw.stories as Record<string, unknown>[]) ?? []).map((s) => ({ ...s, coverImage: img(s.coverImage), gallery: imgs(s.gallery) })) as unknown as Story[];
   const history = ((raw.history as Record<string, unknown>[]) ?? []).map((h) => ({ ...h, image: img(h.image) })) as unknown as HistoryEntry[];

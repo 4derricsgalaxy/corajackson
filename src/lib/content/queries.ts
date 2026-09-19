@@ -50,6 +50,7 @@ const toMember = (d: Doc): FamilyMember => ({
   shortBio: str(d.shortBio),
   bio: rich(d.bio),
   portrait: fromCms(d.portrait),
+  treePhoto: fromCms(d.treePhoto),
   heroImage: fromCms(d.heroImage),
   gallery: images(d.gallery),
   accentColor: str(d.accentColor),
@@ -144,7 +145,7 @@ async function withFallback<T>(remote: () => Promise<T>, local: () => T): Promis
 /* ---------- public API ---------- */
 export const getMembers = cache(async (): Promise<FamilyMember[]> =>
   withFallback(
-    async () => (await fetchAll(TYPES.members, ["portrait", "heroImage", "gallery"])).map(toMember).sort(bySort),
+    async () => (await fetchAll(TYPES.members, ["portrait", "treePhoto", "heroImage", "gallery"])).map(toMember).sort(bySort),
     () => loadLocalContent().members.filter((m) => m.published !== false).sort(bySort),
   ),
 );

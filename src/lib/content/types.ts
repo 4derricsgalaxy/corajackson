@@ -33,6 +33,8 @@ export interface FamilyMember {
   shortBio?: string;
   bio?: RichContent;
   portrait?: SiteImage;
+  /** Photo for this person's frame on the Family Tree page; the tree falls back to the portrait. */
+  treePhoto?: SiteImage;
   heroImage?: SiteImage;
   gallery?: SiteImage[];
   accentColor?: string;
