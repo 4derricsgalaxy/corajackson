@@ -11,6 +11,8 @@ Everything on the site comes from five collections in Snackbox (snackboxcms.com 
    - **Family Line**: pick which of Cora's eight children this person descends from (the site also works this out, but setting it keeps albums tidy).
    - **Generation**: 1 for Cora's children, 2 for grandchildren, 3 for great-grandchildren, 4 for great-great-grandchildren.
    - **Portrait**: upload or pick from the media library. A vertical (4:5) photo looks best.
+   - **Family tree photo**: the picture in this person's frame on the Family Tree page (the original site used childhood photos there). Leave it empty and the tree shows the Portrait.
+   - **Banner image**: the faded background behind this person's page. Leave it empty for the autumn leaves.
    - **Short Bio**: one or two sentences shown on cards and in the tree panel.
    - **Biography**: the full story (rich text).
    - **Other Parent / Family Note**: e.g. `Mother: Jane Doe (married 2010)`.
