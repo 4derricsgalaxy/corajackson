@@ -61,7 +61,8 @@ export function PersonChildren({ person }: { person: TreeNode }) {
                 {block.members.map((child) => (
                   <li key={child._id}>
                     <Link href={`/family/${child.slug}`} className="wix-person-kid">
-                      <PersonPortrait image={child.portrait} name={child.title} width={99} height={121} />
+                      {/* the original showed a childhood photo here, not the portrait from the child's own page */}
+                      <PersonPortrait image={child.treePhoto?.url ? child.treePhoto : child.portrait} name={child.title} width={99} height={121} />
                       <span className="wix-child-name wix-person-kid-name">{firstName(child)}</span>
                     </Link>
                   </li>
