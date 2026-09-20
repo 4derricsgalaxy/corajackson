@@ -42,8 +42,9 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const person = graph.bySlug.get(slug);
   if (!person) notFound();
 
-  // Memories: the member's own gallery, photos tagged with them, and (for Cora and her children) their line's album.
-  const tagged = photos.filter((p) => p.peopleIds?.includes(person._id) || (person.depth <= 1 && p.lineageId === person._id));
+  // Memories: the member's own gallery, photos tagged with them, and (for Cora and her children) the photos in their
+  // line's album that nobody is tagged in. A line photo tagged with someone else belongs on that person's page only.
+  const tagged = photos.filter((p) => p.peopleIds?.includes(person._id) || (person.depth <= 1 && p.lineageId === person._id && !p.peopleIds?.length));
   const seen = new Set<string>();
   const memories: SliderPhoto[] = [];
   const add = (key: string, image: { url: string; srcset?: string; alt?: string | null; position?: string; originalUrl?: string }, caption?: string) => {
