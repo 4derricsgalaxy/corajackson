@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
-import { clarendon, didot, lulo, poppins, proxima } from "./fonts";
+import { bioFontVariables, clarendon, didot, lulo, poppins, proxima } from "./fonts";
 import { getSettings } from "@/lib/content/queries";
 
 export const revalidate = 3600;
@@ -25,7 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${proxima.variable} ${didot.variable} ${lulo.variable} ${clarendon.variable} ${poppins.variable}`}>
+    <html lang="en" className={`${proxima.variable} ${didot.variable} ${lulo.variable} ${clarendon.variable} ${poppins.variable} ${bioFontVariables}`}>
       <body>
         <main className="relative px-0 pb-[52px] pt-0 md:pt-[5px]">{children}</main>
         {/* Snackbox on-page editing: inert for visitors, activates for signed-in editors */}

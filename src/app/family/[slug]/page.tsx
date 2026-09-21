@@ -14,6 +14,7 @@ import { PROJECT } from "@/lib/cms/client";
 import { editableField, editablePage } from "@/lib/cms/sdk";
 import { fullSrc } from "@/lib/content/image";
 import { getAssetIndex, getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
+import { quoteStyle } from "@/components/wix/person/quote-style";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -106,7 +107,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             <div className="wix-person-left">
               <h1 className="wix-h1 wix-person-title" {...editableField(person._id, "title")}>{person.title}</h1>
               {/* portrait + facts float; the quote sits under the portrait and wraps around a tall fact column */}
-              <div className="wix-person-bio">
+              <div className="wix-person-bio" style={quoteStyle(settings)}>
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")}>
                   <PersonPortrait image={person.portrait} name={person.title} width={160} height={215} priority />
                 </div>

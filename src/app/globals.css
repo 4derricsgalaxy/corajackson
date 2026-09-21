@@ -98,11 +98,12 @@ body {
 
 /* The italic quote under the portrait */
 .wix-quote {
-  font-family: var(--font-didot), Didot, Georgia, serif;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 14px;
-  line-height: 1.1;
+  /* the --wix-quote-* variables come from Site settings (person/quote-style.ts); the fallbacks are the original look */
+  font-family: var(--wix-quote-font, var(--font-didot), Didot, Georgia, serif);
+  font-style: var(--wix-quote-style, italic);
+  font-weight: var(--wix-quote-weight, 500);
+  font-size: var(--wix-quote-size, 14px);
+  line-height: var(--wix-quote-leading, 1.1);
   color: #010101;
 }
 .wix-quote p { margin: 0; }

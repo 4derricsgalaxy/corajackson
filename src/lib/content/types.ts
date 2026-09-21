@@ -129,6 +129,10 @@ export interface SiteSettings {
   treeImage?: SiteImage;
   backgroundImage?: SiteImage;
   footerText?: string;
+  /** Site settings > write-up font / style / size: the text under every person's portrait */
+  bioFont?: string;
+  bioFontStyle?: string;
+  bioFontSize?: string;
   contactEmail?: string;
   primaryColor?: string;
   accentColor?: string;
