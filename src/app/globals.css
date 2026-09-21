@@ -307,8 +307,8 @@ body {
 .wix-person-fact dt { margin: 0; }
 .wix-person-fact dd { margin: 1.5px 0 0; overflow-wrap: break-word; }
 
-.wix-person-quote { clear: left; width: 186px; } /* always under the portrait; still wraps beside a tall fact column */
-.wix-person-quote-wide { clear: both; width: 370px; margin-bottom: 14px; } /* long biographies: a wider measure, below portrait and facts */
+/* the write-up is one standard column on every page: under the portrait and exactly as wide as it (160px) */
+.wix-person-quote { clear: left; box-sizing: border-box; width: 160px; margin-bottom: 14px; }
 .wix-person-quote .wix-quote, .wix-person-quote.wix-quote { overflow-wrap: break-word; }
 .wix-person-quote p { margin: 0; }
 
@@ -551,7 +551,6 @@ body {
   .wix-person-title { width: auto; max-width: none; font-size: 32px; line-height: 1.25; }
   .wix-person-bio { width: auto; margin-left: 0; }
   .wix-person-facts { width: calc(100% - 152px); }
-  .wix-person-quote, .wix-person-quote-wide { width: auto; max-width: 420px; }
   .wix-person-right { margin-top: 8px; }
   .wix-person-children-h { margin: 18px 0 8px; }
   .wix-person-children-h + .wix-person-group { margin-top: 0; }
@@ -585,6 +584,7 @@ body {
 }
 @media (max-width: 400px) {
   .wix-person-portrait .wix-person-photo { width: 140px; height: 188px; }
+  .wix-person-quote { width: 140px; }
   .wix-person-facts { width: calc(100% - 132px); }
 }
 /* touch devices swipe the strip; the chevrons would only cover photos */

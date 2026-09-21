@@ -14,7 +14,6 @@ import { PROJECT } from "@/lib/cms/client";
 import { editableField, editablePage } from "@/lib/cms/sdk";
 import { fullSrc } from "@/lib/content/image";
 import { getAssetIndex, getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
-import type { RichContent } from "@/lib/content/types";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -71,8 +70,8 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
     : undefined;
 
   const hasBio = Array.isArray(person.bio) ? person.bio.length > 0 : Boolean(person.bio);
-  // Joanne's quote ran ~400 characters in a 185px column; much longer bios get a wider measure so the page grows gracefully.
-  const quoteClass = clsx("wix-person-quote", richTextLength(hasBio ? person.bio : person.shortBio) > 560 && "wix-person-quote-wide");
+  // One standard write-up column on every page: exactly as wide as the portrait above it.
+  const quoteClass = "wix-person-quote";
 
   // The editor's "Page content" list: this member first, then each child (their tiles live on the CHILD's entry).
   const pageDocuments = [
@@ -157,16 +156,4 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
       </WixCanvas>
     </div>
   );
-}
-
-/** Rough character count of Portable Text blocks or a legacy HTML/plain string. */
-function richTextLength(content?: RichContent | null): number {
-  if (!content) return 0;
-  if (typeof content === "string") return content.replace(/<[^>]*>/g, "").length;
-  let n = 0;
-  for (const block of content) {
-    const children = (block as { children?: unknown })?.children;
-    if (Array.isArray(children)) for (const c of children) n += typeof (c as { text?: unknown })?.text === "string" ? (c as { text: string }).text.length : 0;
-  }
-  return n;
 }
