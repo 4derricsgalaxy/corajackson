@@ -61,9 +61,12 @@ export function PersonChildren({ person }: { person: TreeNode }) {
                 {block.members.map((child) => (
                   <li key={child._id}>
                     <Link href={`/family/${child.slug}`} className="wix-person-kid">
-                      {/* the original showed a childhood photo here, not the portrait from the child's own page */}
-                      <PersonPortrait image={child.treePhoto?.url ? child.treePhoto : child.portrait} name={child.title} width={99} height={121} />
-                      <span className="wix-child-name wix-person-kid-name">{firstName(child)}</span>
+                      {/* the original showed a childhood photo here, not the portrait from the child's own page.
+                          The tile belongs to the CHILD's entry, so in edit mode it opens that entry's photo / name. */}
+                      <span className="wix-person-kid-photo" {...editableField(child._id, child.treePhoto?.url ? "treePhoto" : "portrait")}>
+                        <PersonPortrait image={child.treePhoto?.url ? child.treePhoto : child.portrait} name={child.title} width={99} height={121} />
+                      </span>
+                      <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")}>{firstName(child)}</span>
                     </Link>
                   </li>
                 ))}

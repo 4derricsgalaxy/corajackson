@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { editableField } from "@/lib/cms/sdk";
 
 export interface SliderPhoto {
   key: string;
@@ -14,7 +15,11 @@ export interface SliderPhoto {
   caption?: string;
   /** CSS object-position honoring the CMS hotspot */
   position?: string;
+  /** CMS entry this picture comes from; in edit mode a click opens it (field "" = the whole entry) */
+  edit?: { docId: string; field: string };
 }
+
+const editAttrs = (p: SliderPhoto) => (p.edit ? editableField(p.edit.docId, p.edit.field) : {});
 
 const THUMB = 133;
 const GAP = 15;
@@ -81,6 +86,7 @@ export function PhotoSlider({ photos, label = "Photos" }: { photos: SliderPhoto[
                   decoding="async"
                   draggable={false}
                   style={p.position ? { objectPosition: p.position } : undefined}
+                  {...editAttrs(p)}
                 />
               </button>
             </li>
@@ -157,7 +163,7 @@ function Lightbox({ photos, index, onIndex, onClose }: { photos: SliderPhoto[]; 
       )}
       <figure className="wix-slider-lb-figure" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
         {/* eslint-disable-next-line @next/next/no-img-element -- served from the CMS CDN on purpose */}
-        <img key={photo.key} src={photo.fullUrl || photo.url} alt={photo.alt} />
+        <img key={photo.key} src={photo.fullUrl || photo.url} alt={photo.alt} {...editAttrs(photo)} />
         <figcaption>
           {photo.caption && <span className="wix-slider-lb-caption">{photo.caption}</span>}
           {many && <span className="wix-slider-lb-count">{index + 1} / {photos.length}</span>}

@@ -10,7 +10,8 @@ import { PersonChildren } from "@/components/wix/person/PersonChildren";
 import { PersonFacts } from "@/components/wix/person/PersonFacts";
 import { PersonPortrait } from "@/components/wix/person/PersonPortrait";
 import { firstName } from "@/components/wix/person/parent-note";
-import { editableField } from "@/lib/cms/sdk";
+import { PROJECT } from "@/lib/cms/client";
+import { editableField, editablePage } from "@/lib/cms/sdk";
 import { fullSrc } from "@/lib/content/image";
 import { getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
 import type { RichContent } from "@/lib/content/types";
@@ -47,13 +48,14 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const tagged = photos.filter((p) => p.peopleIds?.includes(person._id) || (person.depth <= 1 && p.lineageId === person._id && !p.peopleIds?.length));
   const seen = new Set<string>();
   const memories: SliderPhoto[] = [];
-  const add = (key: string, image: { url: string; srcset?: string; alt?: string | null; position?: string; originalUrl?: string }, caption?: string) => {
+  const add = (key: string, image: { url: string; srcset?: string; alt?: string | null; position?: string; originalUrl?: string }, edit: SliderPhoto["edit"], caption?: string) => {
     if (!image?.url || seen.has(image.url)) return;
     seen.add(image.url);
-    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position });
+    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position, edit });
   };
-  (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, img.alt || undefined));
-  tagged.forEach((p) => add(p._id, p.image, p.caption || p.title || undefined));
+  // edit mode: a gallery picture opens this member's gallery list, a tagged photo opens its own Photos entry
+  (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, { docId: person._id, field: "gallery" }, img.alt || undefined));
+  tagged.forEach((p) => add(p._id, p.image, { docId: p._id, field: "" }, p.caption || p.title || undefined));
 
   const personStories = stories.filter((s) => s.authorId === person._id || s.peopleIds?.includes(person._id));
 
@@ -65,8 +67,14 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   // Joanne's quote ran ~400 characters in a 185px column; much longer bios get a wider measure so the page grows gracefully.
   const quoteClass = clsx("wix-person-quote", richTextLength(hasBio ? person.bio : person.shortBio) > 560 && "wix-person-quote-wide");
 
+  // The editor's "Page content" list: this member first, then each child (their tiles live on the CHILD's entry).
+  const pageDocuments = [
+    { docId: person._id, title: `${person.title} (this page)` },
+    ...person.children.map((c) => ({ docId: c._id, title: `Child: ${c.title}` })),
+  ];
+
   return (
-    <div className="wix-person-wrap">
+    <div className="wix-person-wrap" data-sbx-page={PROJECT} {...editablePage(pageDocuments)}>
       <Link href={up.href} className="wix-side-tab wix-person-side-tab">{up.label}</Link>
 
       <WixCanvas minHeight={560} className="wix-person">

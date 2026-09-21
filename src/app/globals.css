@@ -353,6 +353,8 @@ body {
   text-decoration: none;
   color: inherit;
 }
+/* edit-binding wrapper for the child's photo: exactly the photo's box, so the layout is unchanged */
+.wix-person-kid-photo { display: block; width: 99px; height: 121px; }
 .wix-person-kid .wix-person-photo { width: 99px; height: 121px; transition: filter 0.2s; }
 .wix-person-kid:hover .wix-person-photo { filter: brightness(1.08); }
 /* the thin "lifted" shadow line the original drew under each row of baby photos:
