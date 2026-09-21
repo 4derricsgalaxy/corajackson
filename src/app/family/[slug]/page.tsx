@@ -13,7 +13,7 @@ import { firstName } from "@/components/wix/person/parent-note";
 import { PROJECT } from "@/lib/cms/client";
 import { editableField, editablePage } from "@/lib/cms/sdk";
 import { fullSrc } from "@/lib/content/image";
-import { getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
+import { getAssetIndex, getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
 import type { RichContent } from "@/lib/content/types";
 
 export const revalidate = 3600;
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
  */
 export default async function PersonPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [graph, photos, stories, settings] = await Promise.all([getFamilyGraph(), getPhotos(), getStories(), getSettings()]);
+  const [graph, photos, stories, settings, assets] = await Promise.all([getFamilyGraph(), getPhotos(), getStories(), getSettings(), getAssetIndex()]);
   const person = graph.bySlug.get(slug);
   if (!person) notFound();
 
@@ -62,6 +62,13 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   // The floating tab in the gray surround links UP one level ("Home" for Cora and her children).
   const parent = person.parentId ? graph.byId.get(person.parentId) : undefined;
   const up = parent && parent.depth > 0 ? { href: `/family/${parent.slug}`, label: firstName(parent) } : { href: "/", label: "Home" };
+
+  // "Father: Donnie Lopp (divorced)" beside the portrait comes from the block this person sits in on their parent's
+  // page, so it is typed once there; the person's own `parentNote` is only the fallback.
+  const homeBlock = parent?.families?.find((f) => f.name && f.children.some((c) => c.childId === person._id));
+  const otherParent = parent && homeBlock?.name
+    ? { docId: parent._id, field: "families", label: `${homeBlock.role ?? "Parent"}:`, value: homeBlock.status ? `${homeBlock.name} (${homeBlock.status})` : homeBlock.name }
+    : undefined;
 
   const hasBio = Array.isArray(person.bio) ? person.bio.length > 0 : Boolean(person.bio);
   // Joanne's quote ran ~400 characters in a 185px column; much longer bios get a wider measure so the page grows gracefully.
@@ -104,7 +111,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")}>
                   <PersonPortrait image={person.portrait} name={person.title} width={160} height={215} priority />
                 </div>
-                <PersonFacts person={person} />
+                <PersonFacts person={person} otherParent={otherParent} />
                 {hasBio ? (
                   <div className={quoteClass} {...editableField(person._id, "bio")}>
                     <RichText content={person.bio} className="wix-quote" />
@@ -118,7 +125,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             </div>
 
             <div className="wix-person-right">
-              <PersonChildren person={person} />
+              <PersonChildren person={person} byId={graph.byId} assets={assets} />
             </div>
           </div>
 

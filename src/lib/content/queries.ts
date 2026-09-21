@@ -1,8 +1,8 @@
 import { cache } from "react";
 import { site } from "../cms/client";
 import { loadLocalContent } from "../data/local";
-import { fromCms } from "./image";
-import { TYPES, type FamilyMember, type HistoryEntry, type Partner, type Photo, type SiteSettings, type Story, type TreeNode } from "./types";
+import { fromCms, nestedFromCms } from "./image";
+import { TYPES, type Family, type FamilyMember, type HistoryEntry, type Partner, type Photo, type SiteImage, type SiteSettings, type Story, type TreeNode } from "./types";
 
 type Doc = Record<string, unknown> & { _id: string; _type?: string; _order?: string };
 
@@ -22,6 +22,25 @@ const partners = (v: unknown): Partner[] | undefined =>
         const row = (p ?? {}) as Record<string, unknown>;
         const name = str(row.name);
         return name ? [{ name, photo: fromCms(row.photo) }] : [];
+      })
+    : undefined;
+const families = (v: unknown): Family[] | undefined =>
+  Array.isArray(v)
+    ? v.map((f, i) => {
+        const row = (f ?? {}) as Record<string, unknown>;
+        const kids = Array.isArray(row.children) ? row.children : [];
+        return {
+          key: str(row._key) ?? `family-${i}`,
+          role: str(row.role),
+          name: str(row.name),
+          status: str(row.status),
+          photo: nestedFromCms(row.photo),
+          children: kids.flatMap((k) => {
+            const kid = (k ?? {}) as Record<string, unknown>;
+            const childId = refId(kid.child);
+            return childId ? [{ childId, photo: nestedFromCms(kid.photo) }] : [];
+          }),
+        };
       })
     : undefined;
 const rich = (v: unknown) => (Array.isArray(v) ? v : str(v));
@@ -49,6 +68,7 @@ const toMember = (d: Doc): FamilyMember => ({
   parentId: refId(d.parent),
   lineageId: refId(d.lineage),
   spouse: str(d.spouse),
+  families: families(d.families),
   partners: partners(d.partners),
   parentNote: str(d.parentNote),
   birthDate: str(d.birthDate),
@@ -189,6 +209,19 @@ export const getSettings = cache(async (): Promise<SiteSettings> =>
     () => loadLocalContent().settings,
   ),
 );
+
+/**
+ * Every fully resolved image the site already loads, by asset id. Images stored inside list items
+ * (a family block's photos) come back from the CMS unresolved; `resolveImage` finishes them from here.
+ */
+export const getAssetIndex = cache(async (): Promise<Map<string, SiteImage>> => {
+  const [members, photos] = await Promise.all([getMembers(), getPhotos()]);
+  const index = new Map<string, SiteImage>();
+  const add = (img?: SiteImage) => { if (img?.assetId && !index.has(img.assetId)) index.set(img.assetId, img); };
+  for (const m of members) { add(m.portrait); add(m.treePhoto); add(m.heroImage); m.gallery?.forEach(add); }
+  for (const p of photos) add(p.image);
+  return index;
+});
 
 /* ---------- derived: the tree ---------- */
 export interface FamilyGraph {

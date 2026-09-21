@@ -10,6 +10,19 @@ export interface SiteImage {
   alt?: string | null;
   /** CSS object-position honoring the CMS hotspot/crop */
   position?: string;
+  /** Snackbox asset id, when known - lets a nested image be matched to its fully resolved copy */
+  assetId?: string;
+}
+
+/**
+ * An image stored INSIDE a list item. The CMS never resolves those (no srcset, and `url` only if the editor
+ * saved one), so they are finished at render time against the asset index - see `resolveImage`.
+ */
+export interface NestedImage {
+  assetId?: string;
+  url?: string;
+  alt?: string | null;
+  position?: string;
 }
 
 /** Portable Text blocks (Snackbox) or legacy HTML (seed). */
@@ -24,7 +37,9 @@ export interface FamilyMember {
   parentId?: string | null;
   lineageId?: string | null;
   spouse?: string;
-  /** Spouses / co-parents with a photo; matched by name to the children's `parentNote` and to `spouse`. */
+  /** "Children on this page": one block per other parent, holding the children and the photo each gets on THIS page. */
+  families?: Family[];
+  /** Superseded by `families`; still read for a member whose children are not listed there. */
   partners?: Partner[];
   parentNote?: string;
   birthDate?: string;
@@ -48,6 +63,17 @@ export interface FamilyMember {
 export interface Partner {
   name: string;
   photo?: SiteImage;
+}
+
+export interface Family {
+  key: string;
+  /** "Father" | "Mother" for a block with children, "Spouse" | "Partner" for a childless one */
+  role?: string;
+  name?: string;
+  /** as typed, e.g. "divorced" - title-cased where the parent's page shows it */
+  status?: string;
+  photo?: NestedImage;
+  children: { childId: string; photo?: NestedImage }[];
 }
 
 export interface Story {
