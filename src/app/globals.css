@@ -910,6 +910,10 @@ body {
 }
 .wix-gallery-tile img { display: block; width: 100%; height: 100%; max-width: none; object-fit: cover; transition: opacity 0.3s; }
 .wix-gallery-tile:hover img { opacity: 0.82; }
+.wix-gallery-label { margin: 3px 0 4px; font: 400 11px/1.3 Arial, Helvetica, sans-serif; color: #000; overflow-wrap: anywhere; }
+.wix-gallery-label span { display: block; }
+.wix-gallery-label-people { color: #515e65; }
+.wix-gallery-label-people.is-empty { color: #b3261e; font-weight: 700; }
 .wix-gallery-tile:focus-visible { outline: 2px solid var(--wix-pill); outline-offset: 2px; }
 
 /* "Show More" sits in a 32px row directly under the grid, as in the original */

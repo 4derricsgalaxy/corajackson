@@ -11,13 +11,15 @@ interface Props {
   sizes?: string;
   /** kept for call-site compatibility; the CMS hotspot drives object-position */
   fit?: "fill" | "fit";
+  /** on-page editing attributes (editableField) for the <img> */
+  edit?: Record<string, string>;
 }
 
 /**
  * Renders a CMS image straight from the media CDN using the srcset the CMS
  * pre-rendered (WebP ladder). No per-request optimizer, no Vercel image quota.
  */
-export function CmsImage({ src, alt, width, height, className, priority, sizes }: Props) {
+export function CmsImage({ src, alt, width, height, className, priority, sizes, edit }: Props) {
   if (!src?.url) {
     return <div className={clsx("bg-paper-3", className)} aria-hidden style={{ aspectRatio: `${width}/${height ?? width}` }} />;
   }
@@ -37,6 +39,7 @@ export function CmsImage({ src, alt, width, height, className, priority, sizes }
       fetchPriority={priority ? "high" : "auto"}
       className={className}
       style={src.position ? { objectPosition: src.position } : undefined}
+      {...edit}
     />
   );
 }

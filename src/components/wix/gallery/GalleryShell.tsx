@@ -14,13 +14,15 @@ interface Props {
   /** album title, shown as a centered heading under the home icon */
   title?: string;
   footerText?: string;
+  /** Snackbox edit mode: whole album at once, title + tagged names under every tile */
+  editing?: boolean;
 }
 
 /**
  * The original Wix gallery page: home icon on top, 5-column photo grid, "Show More",
  * the Family Tree pill and the footer label. Shared by /gallery and /gallery/[album].
  */
-export function GalleryShell({ items, albums, current, title, footerText }: Props) {
+export function GalleryShell({ items, albums, current, title, footerText, editing }: Props) {
   return (
     <WixCanvas minHeight={676} className={clsx("wix-gallery-page", footerLabelText(footerText).length > 40 && "wix-gallery-long-footer")}>
       <div className="wix-gallery-top">
@@ -43,7 +45,7 @@ export function GalleryShell({ items, albums, current, title, footerText }: Prop
         )}
       </div>
       {items.length > 0 ? (
-        <GalleryGrid key={current ?? "all"} items={items} editable className="wix-gallery-body" />
+        <GalleryGrid key={current ?? "all"} items={items} editable editing={editing} className="wix-gallery-body" />
       ) : (
         <p className="wix-gallery-empty">Family photos will appear here.</p>
       )}

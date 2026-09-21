@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import { GalleryShell } from "@/components/wix/gallery/GalleryShell";
 import { orderPhotos, toGalleryItems } from "@/components/wix/gallery/types";
@@ -25,9 +26,12 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
   const albums = albumsFor(graph, photos);
   const a = albums.find((x) => x.slug === album);
   if (!a) notFound();
+  const editing = (await draftMode()).isEnabled;
+  const names = editing ? new Map([...graph.byId.values()].map((m) => [m._id, m.nickname ?? m.title.split(" ")[0]])) : undefined;
   return (
     <GalleryShell
-      items={toGalleryItems(orderPhotos(a.photos))}
+      items={toGalleryItems(orderPhotos(a.photos), names)}
+      editing={editing}
       albums={albums}
       current={a.slug}
       title={a.title}

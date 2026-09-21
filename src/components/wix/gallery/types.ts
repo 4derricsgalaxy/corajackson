@@ -8,6 +8,8 @@ export interface GalleryItem {
   title?: string;
   caption?: string;
   year?: number;
+  /** short names of the people tagged; only sent in edit mode (tile labels) */
+  people?: string[];
 }
 
 /** Featured photos first, then CMS order (the incoming order). */
@@ -20,7 +22,7 @@ export function orderPhotos(photos: Photo[]): Photo[] {
  * 1,000+ photos and the whole list rides in the RSC payload): no originalUrl, no empty keys,
  * no alt/caption that merely repeat the title. The item id is the CMS document id.
  */
-export function toGalleryItems(photos: Photo[]): GalleryItem[] {
+export function toGalleryItems(photos: Photo[], names?: Map<string, string>): GalleryItem[] {
   return photos.map((p) => {
     const { url, srcset, width, height, alt, position } = p.image;
     const image: SiteImage = { url };
@@ -32,6 +34,7 @@ export function toGalleryItems(photos: Photo[]): GalleryItem[] {
     if (p.title) item.title = p.title;
     if (p.caption && p.caption !== p.title) item.caption = p.caption;
     if (p.year !== undefined) item.year = p.year;
+    if (names) item.people = (p.peopleIds ?? []).map((id) => names.get(id)).filter((n): n is string => !!n);
     return item;
   });
 }
