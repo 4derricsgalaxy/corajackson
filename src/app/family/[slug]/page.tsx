@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -73,6 +74,9 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const hasBio = Array.isArray(person.bio) ? person.bio.length > 0 : Boolean(person.bio);
   // One standard write-up column on every page: exactly as wide as the portrait above it.
   const quoteClass = "wix-person-quote";
+  // "Background strength (%)" on the entry: 0-100, empty = the standard 45% used by every page.
+  const strength = typeof person.heroStrength === "number" ? Math.min(100, Math.max(0, person.heroStrength)) / 100 : undefined;
+  const artStyle: CSSProperties | undefined = strength === undefined ? undefined : ({ "--wix-art-opacity": String(strength) } as CSSProperties);
 
   // The editor's "Page content" list: this member first, then each child (their tiles live on the CHILD's entry).
   const pageDocuments = [
@@ -96,12 +100,12 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
               alt=""
               aria-hidden
               className="wix-canvas-art wix-person-art wix-person-art-hero"
-              style={person.heroImage.position ? { objectPosition: person.heroImage.position } : undefined}
+              style={{ ...artStyle, ...(person.heroImage.position ? { objectPosition: person.heroImage.position } : undefined) }}
               {...editableField(person._id, "heroImage")}
             />
           ) : (
             // eslint-disable-next-line @next/next/no-img-element -- static decorative artwork
-            <img src="/wix/leaves.png" alt="" aria-hidden className="wix-canvas-art wix-person-art" />
+            <img src="/wix/leaves.png" alt="" aria-hidden className="wix-canvas-art wix-person-art" style={artStyle} {...editableField(person._id, "heroImage")} />
           )}
           <div className="wix-person-cols">
             <div className="wix-person-left">

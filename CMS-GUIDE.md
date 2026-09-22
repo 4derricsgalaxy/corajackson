@@ -15,7 +15,7 @@ The page always shows, top to bottom:
 5. **Memories** - every photo the person is tagged in.
 6. Stories they are in, then the Home / Family Tree buttons.
 
-**Optional personal background:** set **Page background** on the entry. Upload it at full strength (about 1280 x 850); the site fades it to 45% and softens the bottom edge itself. Empty = autumn leaves.
+**Optional personal background:** set **Page background** on the entry. Upload it at full strength (about 1280 x 850); the site fades it to 45% and softens the bottom edge itself. Empty = autumn leaves. **Background strength (%)** on the same entry changes how much it shows through: 45 (or empty) = the standard look, lower = fainter, 100 = as uploaded. It works for the leaves too.
 
 ### Checklist: setting up someone who now has children
 
@@ -50,7 +50,7 @@ Where each picture on a person's page comes from:
 | On the page | Lives in |
 | --- | --- |
 | Big framed portrait | that person -> **Portrait (their own page)** |
-| Faded page background | that person -> **Page background** |
+| Faded page background | that person -> **Page background** (how faint: **Background strength (%)**, 45 = standard) |
 | A child's tile under *Children* | the PARENT's entry -> **Children on this page** -> child -> **Photo on this page** |
 | Small photo beside a group of children | the parent's entry -> **Children on this page** -> block -> **Their photo** |
 | Family Tree frame | that person -> **Childhood photo** (else their Portrait) |

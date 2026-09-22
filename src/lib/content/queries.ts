@@ -81,6 +81,7 @@ const toMember = (d: Doc): FamilyMember => ({
   portrait: fromCms(d.portrait),
   treePhoto: fromCms(d.treePhoto),
   heroImage: fromCms(d.heroImage),
+  heroStrength: num(d.heroStrength),
   gallery: images(d.gallery),
   accentColor: str(d.accentColor),
   sortOrder: str(d._order),

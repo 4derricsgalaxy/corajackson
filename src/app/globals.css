@@ -255,10 +255,12 @@ body {
   min-height: 430px;
   max-height: 960px;
   object-fit: fill; /* the original stretched the leaves to the 980x687 box */
+  /* "Background strength" on the entry, relative to the leaves' normal look: 45 (or empty) = as always */
+  opacity: calc(var(--wix-art-opacity, 0.45) / 0.45);
 }
 .wix-person-art-hero {
   object-fit: cover;
-  opacity: 0.45;
+  opacity: var(--wix-art-opacity, 0.45); /* "Background strength" on the entry, default 45% */
   /* a photo has a hard bottom edge the leaves don't: fade it out */
   -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);

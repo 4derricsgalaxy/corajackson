@@ -53,6 +53,8 @@ export interface FamilyMember {
   /** Childhood photo: this person's frame on the Family Tree and their tile under a parent's Children. Falls back to the portrait. */
   treePhoto?: SiteImage;
   heroImage?: SiteImage;
+  /** Background strength, 0-100 (percent). Empty = the standard 45. Applies to the hero image or the default leaves. */
+  heroStrength?: number;
   gallery?: SiteImage[];
   accentColor?: string;
   sortOrder?: number | string;
