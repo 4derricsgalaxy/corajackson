@@ -2,6 +2,30 @@
 
 Everything on the site comes from five collections in Snackbox (snackboxcms.com → Cora Mae Jackson Family). You can also click **Edit** on any page of the live site to change text and photos in place. Changes go live within seconds of publishing.
 
+## The standard page for anyone who has children
+
+Every person gets the SAME page, at any generation - Cora's children, grandchildren, great-grandchildren. It exists the moment their entry is published, at `/family/<Page address>`. Nothing has to be built per person.
+
+The page always shows, top to bottom:
+
+1. Full name.
+2. Framed **Portrait**, with the facts beside it (Born, Passed, Place, Resides, Spouse, Life & Work, plus the other-parent line taken from their parent's *Children on this page* block).
+3. The write-up under the portrait (**Quote / biography**, else **Short bio**).
+4. **Children** - one block per other parent: role + name, marital status, that person's small photo, then a tile per child linking to the child's page.
+5. **Memories** - every photo the person is tagged in.
+6. Stories they are in, then the Home / Family Tree buttons.
+
+**Optional personal background:** set **Page background** on the entry. Upload it at full strength (about 1280 x 850); the site fades it to 45% and softens the bottom edge itself. Empty = autumn leaves.
+
+### Checklist: setting up someone who now has children
+
+1. **Their own entry:** Full name, Short name, Page address, Portrait (their own page), Childhood photo (Family Tree), optional Page background, the facts, a write-up.
+2. **Each child:** Family Members -> Add item: Full name, Short name, Page address, Portrait, **Parent** = this person, Family line, Generation. Publish.
+3. **Parent's entry -> Children on this page:** one block per other parent (Father/Mother, name, marital status, their photo), each child inside it, optional *Photo on this page*.
+4. Publish, then check the live page: name, portrait, facts, write-up, Children blocks, Memories.
+
+A child whose Parent is set but who is not in the list still shows (safety net, grouped by their own *Other parent* field); the list only adds control over block, order and photo. The same text is in the Snackbox Help panel ("The standard page for anyone who has children").
+
 ## Edit a person's page
 
 Open **Family Members** and pick the person (e.g. *Tammie Denise McMath*). The form runs in the same order as their page: name, photos, the facts beside the portrait, the quote, then **Children on this page**.
