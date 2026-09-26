@@ -56,6 +56,15 @@ Where each picture on a person's page comes from:
 | Family Tree frame | that person -> **Childhood photo** (else their Portrait) |
 | Memories slider | **Photos** entries that tag the person (plus their *Extra Memories photos*) |
 
+## Ctrl+E: edit the page you're on
+
+On any page of the site, press **Ctrl+E** (Cmd+E on a Mac).
+
+- If the Snackbox editor is already open on the page, it switches to **Edit**.
+- If not, Snackbox opens. Sign in if asked, then choose **Edit your site**. You come back to the page you were on, ready to edit.
+
+The shortcut only works in a browser that has been used to edit the site at least once, so visitors keep their browser's normal Ctrl+E.
+
 ## Move text and change fonts (the Layout button)
 
 On any page opened for editing from Snackbox, a **Layout** button sits in the bottom-right corner.

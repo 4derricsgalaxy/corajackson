@@ -5,6 +5,7 @@ import "./globals.css";
 import { bioFontVariables, clarendon, didot, lulo, poppins, proxima } from "./fonts";
 import { getSettings } from "@/lib/content/queries";
 import { TextLayoutEditor } from "@/components/wix/layout/TextLayoutEditor";
+import { EditShortcut } from "@/components/wix/layout/EditShortcut";
 
 export const revalidate = 3600;
 
@@ -33,6 +34,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <main className="relative px-0 pb-[52px] pt-0 md:pt-[5px]">{children}</main>
         {editing && <TextLayoutEditor />}
+        {/* Ctrl+E: edit the page you are on */}
+        <EditShortcut editing={editing} />
         {/* Snackbox on-page editing: inert for visitors, activates for signed-in editors */}
         <Script id="snackbox-overlay" strategy="afterInteractive" src={`${CMS}/overlay.js`} data-project={PROJECT} />
       </body>
