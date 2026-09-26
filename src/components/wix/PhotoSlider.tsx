@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { editableField } from "@/lib/cms/sdk";
 
@@ -23,6 +23,10 @@ const editAttrs = (p: SliderPhoto) => (p.edit ? editableField(p.edit.docId, p.ed
 
 const THUMB = 133;
 const GAP = 15;
+/** hover-scroll speed in px per second: a medium pace, about one thumbnail a second */
+const HOVER_SPEED = 140;
+/** after an arrow click, let its smooth page-scroll finish before hover-scrolling resumes */
+const CLICK_PAUSE_MS = 700;
 
 function Chevron({ dir }: { dir: "prev" | "next" }) {
   return (
@@ -48,9 +52,46 @@ export function PhotoSlider({ photos, label = "Photos" }: { photos: SliderPhoto[
     return () => ro.disconnect();
   }, [photos.length]);
 
+  // Hovering a chevron with a mouse glides the strip that way until the pointer leaves or the end is reached.
+  const hover = useRef<{ dir: 1 | -1; raf: number; last: number; pos: number; pauseUntil: number } | null>(null);
+
+  const stopHover = useCallback(() => {
+    const h = hover.current;
+    if (!h) return;
+    cancelAnimationFrame(h.raf);
+    hover.current = null;
+    windowRef.current?.classList.remove("wix-slider-gliding");
+  }, []);
+
+  const startHover = (dir: 1 | -1, e: PointerEvent) => {
+    if (e.pointerType !== "mouse") return;
+    const el = windowRef.current;
+    if (!el) return;
+    stopHover();
+    el.classList.add("wix-slider-gliding"); // snap points would fight the tiny per-frame steps
+    const h = { dir, raf: 0, last: performance.now(), pos: el.scrollLeft, pauseUntil: 0 };
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - h.last) / 1000);
+      h.last = now;
+      if (now >= h.pauseUntil) {
+        // pick up any scroll that happened meanwhile (arrow click, wheel, keyboard)
+        if (Math.abs(el.scrollLeft - h.pos) > 2) h.pos = el.scrollLeft;
+        const max = el.scrollWidth - el.clientWidth;
+        h.pos = Math.max(0, Math.min(max, h.pos + h.dir * HOVER_SPEED * dt));
+        el.scrollLeft = h.pos;
+      }
+      h.raf = requestAnimationFrame(tick);
+    };
+    h.raf = requestAnimationFrame(tick);
+    hover.current = h;
+  };
+
+  useEffect(() => stopHover, [stopHover]);
+
   const page = (dir: 1 | -1) => {
     const el = windowRef.current;
     if (!el) return;
+    if (hover.current) hover.current.pauseUntil = performance.now() + CLICK_PAUSE_MS;
     const step = Math.max(1, Math.floor((el.clientWidth + GAP) / (THUMB + GAP))) * (THUMB + GAP);
     const max = el.scrollWidth - el.clientWidth;
     // at either end the strip wraps around (an instant jump: a smooth scroll across the whole strip is dizzying)
@@ -65,7 +106,7 @@ export function PhotoSlider({ photos, label = "Photos" }: { photos: SliderPhoto[
   return (
     <div className="wix-slider" role="group" aria-label={label}>
       {overflowing && (
-        <button type="button" className="wix-slider-arrow wix-slider-prev" aria-label="Previous photos" onClick={() => page(-1)}>
+        <button type="button" className="wix-slider-arrow wix-slider-prev" aria-label="Previous photos" onClick={() => page(-1)} onPointerEnter={(e) => startHover(-1, e)} onPointerLeave={stopHover}>
           <Chevron dir="prev" />
         </button>
       )}
@@ -94,7 +135,7 @@ export function PhotoSlider({ photos, label = "Photos" }: { photos: SliderPhoto[
         </ul>
       </div>
       {overflowing && (
-        <button type="button" className="wix-slider-arrow wix-slider-next" aria-label="More photos" onClick={() => page(1)}>
+        <button type="button" className="wix-slider-arrow wix-slider-next" aria-label="More photos" onClick={() => page(1)} onPointerEnter={(e) => startHover(1, e)} onPointerLeave={stopHover}>
           <Chevron dir="next" />
         </button>
       )}

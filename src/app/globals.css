@@ -418,6 +418,7 @@ body {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-x: contain;
 }
+.wix-slider-window.wix-slider-gliding { scroll-snap-type: none; }
 .wix-slider-track {
   list-style: none;
   display: flex;
