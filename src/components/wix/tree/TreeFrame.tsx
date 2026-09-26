@@ -2,6 +2,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { CmsImage } from "@/components/ui/CmsImage";
 import { editableField } from "@/lib/cms/sdk";
+import { textLayout } from "@/lib/content/text-layout";
 import type { TreeNode } from "@/lib/content/types";
 import type { TreeSlot } from "./slots";
 
@@ -51,7 +52,7 @@ export function TreeFrame({ member, slot, inFlow }: { member: TreeNode; slot: Tr
           )}
         </span>
       </span>
-      <span className="wix-tree-name" aria-hidden>
+      <span className="wix-tree-name" aria-hidden {...textLayout(member._id, member.textLayout)("tree-name", undefined, `Tree name: ${label}`)}>
         {label}
       </span>
     </Link>

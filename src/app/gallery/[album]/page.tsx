@@ -35,7 +35,7 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
       albums={albums}
       current={a.slug}
       title={a.title}
-      footerText={settings.footerText}
+      footerText={settings.footerText} settingsId={settings._id} settingsLayout={settings.textLayout}
     />
   );
 }

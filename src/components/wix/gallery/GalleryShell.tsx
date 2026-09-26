@@ -3,6 +3,7 @@ import { clsx } from "clsx";
 import { WixCanvas } from "@/components/wix/WixCanvas";
 import { FamilyTreeButton, FooterLabel, HomeButton, footerLabelText } from "@/components/wix/WixNav";
 import type { Album } from "@/lib/albums";
+import { textLayout, type TextLayoutRow } from "@/lib/content/text-layout";
 import { GalleryGrid } from "./GalleryGrid";
 import type { GalleryItem } from "./types";
 
@@ -16,20 +17,24 @@ interface Props {
   footerText?: string;
   /** Snackbox edit mode: whole album at once, title + tagged names under every tile */
   editing?: boolean;
+  /** site settings entry that holds this page's text layout (the gallery has no entry of its own) */
+  settingsId?: string;
+  settingsLayout?: TextLayoutRow[];
 }
 
 /**
  * The original Wix gallery page: home icon on top, 5-column photo grid, "Show More",
  * the Family Tree pill and the footer label. Shared by /gallery and /gallery/[album].
  */
-export function GalleryShell({ items, albums, current, title, footerText, editing }: Props) {
+export function GalleryShell({ items, albums, current, title, footerText, editing, settingsId, settingsLayout }: Props) {
+  const t = textLayout(settingsId, settingsLayout);
   return (
     <WixCanvas minHeight={676} className={clsx("wix-gallery-page", footerLabelText(footerText).length > 40 && "wix-gallery-long-footer")}>
       <div className="wix-gallery-top">
         <HomeButton large />
-        {title && <h1 className="wix-h2 wix-gallery-title">{title}</h1>}
+        {title && <h1 className="wix-h2 wix-gallery-title" {...t("gallery-title", undefined, "Album title (all albums)")}>{title}</h1>}
         {albums.length > 0 && (
-          <nav aria-label="Albums" className="wix-gallery-filter">
+          <nav aria-label="Albums" className="wix-gallery-filter" {...t("gallery-albums", undefined, "Album links")}>
             <Link href="/gallery" className={clsx("wix-text-link", !current && "is-current")} aria-current={!current ? "page" : undefined}>
               {current ? "All photos" : "All"}
             </Link>
@@ -47,12 +52,12 @@ export function GalleryShell({ items, albums, current, title, footerText, editin
       {items.length > 0 ? (
         <GalleryGrid key={current ?? "all"} items={items} editable editing={editing} className="wix-gallery-body" />
       ) : (
-        <p className="wix-gallery-empty">Family photos will appear here.</p>
+        <p className="wix-gallery-empty" {...t("gallery-empty", undefined, "No photos text")}>Family photos will appear here.</p>
       )}
-      <div className="wix-gallery-nav">
+      <div className="wix-gallery-nav" {...t("gallery-btn-tree", undefined, "Family Tree button (gallery)")}>
         <FamilyTreeButton />
       </div>
-      <FooterLabel text={footerText} />
+      <FooterLabel text={footerText} layout={t("gallery-footer", undefined, "Footer label (gallery)")} />
     </WixCanvas>
   );
 }

@@ -44,6 +44,6 @@ export function footerLabelText(text?: string) {
 }
 
 /** "Cora Mae Jackson Family" label at the bottom-left of the canvas. */
-export function FooterLabel({ text }: { text?: string }) {
-  return <p className="wix-footer-label">{footerLabelText(text)}</p>;
+export function FooterLabel({ text, layout }: { text?: string; layout?: object }) {
+  return <p className="wix-footer-label" {...layout}>{footerLabelText(text)}</p>;
 }

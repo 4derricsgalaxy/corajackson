@@ -1082,7 +1082,8 @@ body {
 [data-tl-style], [data-tl-style] * { font-style: var(--tl-style) !important; }
 [data-tl-weight], [data-tl-weight] * { font-weight: var(--tl-weight) !important; }
 [data-tl-color], [data-tl-color] * { color: var(--tl-color) !important; }
-[data-tl-moved] { translate: var(--tl-x, 0px) var(--tl-y, 0px); position: relative; z-index: 2; }
+[data-tl-moved] { translate: var(--tl-x, 0px) var(--tl-y, 0px); z-index: 2; }
+:where([data-tl-moved]) { position: relative; } /* zero specificity: absolutely placed items (tree title, tree names) stay absolute */
 span[data-tl-moved], a[data-tl-moved] { display: inline-block; }
 
 /* Layout tool (edit mode only) */
@@ -1090,6 +1091,7 @@ html.tl-active [data-tl-key] { outline: 1px dashed #2f6fed; outline-offset: 2px;
 html.tl-active [data-tl-key]:hover { outline-style: solid; }
 html.tl-active [data-tl-key].tl-selected { outline: 2px solid #2f6fed; background: rgb(47 111 237 / 0.06); }
 html.tl-active [data-tl-key].tl-dirty { outline-color: #d97706; }
+html.tl-active .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-only labels stay visible so they can be picked */
 .tl-launch, .tl-toolbar { position: fixed; z-index: 2147483000; font: 600 13px/1.2 system-ui, sans-serif; color: #fafafa; }
 .tl-launch { right: 16px; bottom: 16px; height: 40px; padding: 0 16px; border-radius: 8px; background: #262626; box-shadow: 0 4px 16px #0004; }
 .tl-launch:hover { background: #404040; }

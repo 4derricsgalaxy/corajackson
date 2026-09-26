@@ -8,6 +8,7 @@ import { TreeFrame, initialsOf } from "@/components/wix/tree/TreeFrame";
 import { TREE_CENTER, TREE_STAGE, assignSlots } from "@/components/wix/tree/slots";
 import { editableField } from "@/lib/cms/sdk";
 import { getFamilyGraph, getSettings } from "@/lib/content/queries";
+import { textLayout } from "@/lib/content/text-layout";
 
 export const revalidate = 3600;
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default async function FamilyTreePage() {
   const cora = graph.root;
   const { placed, extra } = assignSlots(graph.lines);
   const familyText = footerLabelText(settings.footerText);
+  const t = textLayout(settings._id, settings.textLayout);
   const coraPhoto = cora?.treePhoto?.url ? cora.treePhoto : cora?.portrait;
   const centerVars = {
     "--x": TREE_CENTER.x,
@@ -36,7 +38,7 @@ export default async function FamilyTreePage() {
     <WixCanvas width={TREE_STAGE.width} background="#9db8b2" className="wix-tree-canvas">
       <div className="wix-tree-inner">
         <div className="wix-tree-stage">
-          <h1 className="wix-tree-title">Family Tree</h1>
+          <h1 className="wix-tree-title" {...t("tree-title", undefined, "Family Tree title")}>Family Tree</h1>
 
           {placed.map(({ member, slot }) => (
             <TreeFrame key={member._id} member={member} slot={slot} />
@@ -65,10 +67,10 @@ export default async function FamilyTreePage() {
           </div>
         )}
 
-        <p className={clsx("wix-tree-family", familyText.length > 36 && "wix-tree-family-long")} {...(settings._id ? editableField(settings._id, "footerText") : {})}>
+        <p className={clsx("wix-tree-family", familyText.length > 36 && "wix-tree-family-long")} {...(settings._id ? editableField(settings._id, "footerText") : {})} {...t("tree-family", undefined, "Family name (tree)")}>
           {familyText}
         </p>
-        <div className="wix-tree-home">
+        <div className="wix-tree-home" {...t("tree-btn-home", undefined, "Home button (tree)")}>
           <HomeButton large />
         </div>
       </div>
