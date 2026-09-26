@@ -4,6 +4,7 @@ import { CmsImage } from "@/components/ui/CmsImage";
 import { ContentPage, ContentTitle, formatStoryDate } from "@/components/wix/content/ContentPage";
 import { editableField } from "@/lib/cms/sdk";
 import { getFamilyGraph, getSettings, getStories } from "@/lib/content/queries";
+import { textLayout } from "@/lib/content/text-layout";
 
 export const revalidate = 3600;
 export const metadata: Metadata = { title: "Stories", description: "Memories and stories told by the Jackson family." };
@@ -12,12 +13,13 @@ export default async function StoriesPage() {
   const [stories, graph, settings] = await Promise.all([getStories(), getFamilyGraph(), getSettings()]);
   return (
     <ContentPage footerText={settings.footerText}>
-      <ContentTitle>Family Stories</ContentTitle>
+      <ContentTitle {...textLayout(settings._id, settings.textLayout)("stories-title", undefined, "Stories page title")}>Family Stories</ContentTitle>
       {stories.length > 0 ? (
         <ul className="wix-content-list">
           {stories.map((s) => {
             const teller = s.authorName ?? (s.authorId ? graph.byId.get(s.authorId)?.title : undefined);
             const date = formatStoryDate(s.storyDate);
+            const t = textLayout(s._id, s.textLayout);
             const meta = [teller ? `Told by ${teller}` : undefined, date].filter(Boolean).join(" · ");
             return (
               <li key={s._id} className="wix-content-story">
@@ -27,11 +29,11 @@ export default async function StoriesPage() {
                   </Link>
                 )}
                 <div className="wix-content-story-text">
-                  <h2 className="wix-content-heading">
+                  <h2 className="wix-content-heading" {...t("list-title", undefined, `List title: ${s.title}`)}>
                     <Link href={`/stories/${s.slug}`} {...editableField(s._id, "title")}>{s.title}</Link>
                   </h2>
-                  {meta && <p className="wix-content-meta">{meta}</p>}
-                  {s.excerpt && <p className="wix-content-excerpt" {...editableField(s._id, "excerpt")}>{s.excerpt}</p>}
+                  {meta && <p className="wix-content-meta" {...t("list-meta", undefined, `List byline: ${s.title}`)}>{meta}</p>}
+                  {s.excerpt && <p className="wix-content-excerpt" {...editableField(s._id, "excerpt")} {...t("list-excerpt", undefined, `Excerpt: ${s.title}`)}>{s.excerpt}</p>}
                 </div>
               </li>
             );

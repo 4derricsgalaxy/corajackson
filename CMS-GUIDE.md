@@ -56,6 +56,19 @@ Where each picture on a person's page comes from:
 | Family Tree frame | that person -> **Childhood photo** (else their Portrait) |
 | Memories slider | **Photos** entries that tag the person (plus their *Extra Memories photos*) |
 
+## Move text and change fonts (the Layout button)
+
+On any page opened for editing from Snackbox, a **Layout** button sits in the bottom-right corner.
+
+1. Press **Layout**. Every text item you can change gets a dashed blue outline, and links and click-to-edit pause.
+2. **Move:** drag the text where you want it. For fine moves, click it and use the arrow keys (1px; hold Shift for 10px).
+3. **Font:** click the text, then use the toolbar: font, size (− / +), **B** bold, *I* italic, color. **Reset** puts that one item back to normal.
+4. Changed items turn orange. **Save layout** saves them and reloads the page (the change goes live right away). **Undo all** throws away unsaved changes. **Done** leaves Layout mode. ⇅ moves the toolbar to the top if it covers something.
+
+What can be changed: on a person's page, the name, each fact (Born, Place...), the write-up, the Children / Memories / Stories headings, the notes above each group of children, each child's name, and "No Children". On the home page: the title, intro, both buttons and the footer label. On a story: title, "Told by" line and the story text. On the Stories and History pages: the page title, plus each story's or entry's title, byline or location, excerpt and text.
+
+Moved text doesn't push anything else around, so check that it doesn't cover something, and look at the page on a phone too. Each page's settings are saved in its own entry under **Text layout (fonts and positions)**. Delete a row there to put that text back to normal.
+
 ## Add a new family member
 
 1. Open **Family Members** -> **Add item**. The fields run in the same order as the page.

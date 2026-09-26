@@ -1073,3 +1073,45 @@ body {
   .wix-content-story-thumb { width: 100px; height: 100px; }
 }
 /* ======================= end GALLERY + CONTENT PAGES block ======================= */
+
+/* ---------- Text layout (per-page fonts + positions from the on-page Layout tool; lib/content/text-layout.ts) ----------
+   The row's values arrive as --tl-* variables on the item; !important so they also beat the class rules
+   of the text inside it (rich text paragraphs, links). Moving uses `translate`, so nothing else on the page shifts. */
+[data-tl-font], [data-tl-font] * { font-family: var(--tl-font) !important; }
+[data-tl-size], [data-tl-size] * { font-size: var(--tl-size) !important; line-height: 1.25 !important; }
+[data-tl-style], [data-tl-style] * { font-style: var(--tl-style) !important; }
+[data-tl-weight], [data-tl-weight] * { font-weight: var(--tl-weight) !important; }
+[data-tl-color], [data-tl-color] * { color: var(--tl-color) !important; }
+[data-tl-moved] { translate: var(--tl-x, 0px) var(--tl-y, 0px); position: relative; z-index: 2; }
+span[data-tl-moved], a[data-tl-moved] { display: inline-block; }
+
+/* Layout tool (edit mode only) */
+html.tl-active [data-tl-key] { outline: 1px dashed #2f6fed; outline-offset: 2px; cursor: move; touch-action: none; user-select: none; }
+html.tl-active [data-tl-key]:hover { outline-style: solid; }
+html.tl-active [data-tl-key].tl-selected { outline: 2px solid #2f6fed; background: rgb(47 111 237 / 0.06); }
+html.tl-active [data-tl-key].tl-dirty { outline-color: #d97706; }
+.tl-launch, .tl-toolbar { position: fixed; z-index: 2147483000; font: 600 13px/1.2 system-ui, sans-serif; color: #fafafa; }
+.tl-launch { right: 16px; bottom: 16px; height: 40px; padding: 0 16px; border-radius: 8px; background: #262626; box-shadow: 0 4px 16px #0004; }
+.tl-launch:hover { background: #404040; }
+.tl-toolbar {
+  bottom: 12px; right: 12px; max-width: min(940px, calc(100vw - 24px)); justify-content: flex-end;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px;
+  border-radius: 12px; background: #262626; box-shadow: 0 8px 32px #0005;
+}
+.tl-toolbar button, .tl-toolbar select, .tl-toolbar input { height: 30px; border-radius: 6px; border: 1px solid #525252; background: #333; color: #fafafa; font: inherit; padding: 0 8px; }
+.tl-toolbar button:hover:not(:disabled) { background: #474747; }
+.tl-toolbar button:disabled { opacity: .45; }
+.tl-toolbar button[aria-pressed="true"] { background: #2f6fed; border-color: #2f6fed; }
+.tl-toolbar select { max-width: 150px; }
+.tl-toolbar input[type="color"] { width: 34px; padding: 2px; }
+.tl-toolbar .tl-b { font-weight: 800; width: 30px; padding: 0; }
+.tl-toolbar .tl-i { font-style: italic; font-family: Georgia, serif; width: 30px; padding: 0; }
+.tl-size { display: inline-flex; gap: 2px; }
+.tl-size button { width: 26px; padding: 0; }
+.tl-size input { width: 52px; text-align: center; padding: 0 2px; }
+.tl-item { font-weight: 700; padding: 0 4px; white-space: nowrap; }
+.tl-sep { flex: 1 1 8px; }
+.tl-msg { font-weight: 500; color: #d4d4d4; }
+.tl-err { color: #fca5a5; max-width: 340px; }
+.tl-toolbar.tl-top { bottom: auto; top: 12px; }
+.tl-toolbar .tl-save { background: #2f6fed; border-color: #2f6fed; }

@@ -1,5 +1,6 @@
 import { editableField } from "@/lib/cms/sdk";
 import type { FamilyMember } from "@/lib/content/types";
+import { textLayout } from "@/lib/content/text-layout";
 import { formatDate, splitNote } from "./parent-note";
 
 interface Props {
@@ -20,11 +21,12 @@ export function PersonFacts({ person, otherParent }: Props) {
   if (person.occupation) pairs.push({ field: "occupation", label: "Life & Work:", value: person.occupation });
   if (note) pairs.push(note);
   if (!pairs.length) return null;
+  const t = textLayout(person._id, person.textLayout);
 
   return (
-    <dl className="wix-person-facts">
+    <dl className="wix-person-facts" {...t("facts")}>
       {pairs.map((p) => (
-        <div key={p.field} className="wix-person-fact">
+        <div key={p.field} className="wix-person-fact" {...t(`fact-${p.field}`)}>
           <dt className="wix-label">{p.label}</dt>
           <dd className="wix-value" {...editableField(p.docId ?? person._id, p.field)}>{p.value}</dd>
         </div>

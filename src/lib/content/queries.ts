@@ -2,6 +2,7 @@ import { cache } from "react";
 import { site } from "../cms/client";
 import { loadLocalContent } from "../data/local";
 import { fromCms, nestedFromCms } from "./image";
+import { parseTextLayout } from "./text-layout";
 import { TYPES, type Family, type FamilyMember, type HistoryEntry, type Partner, type Photo, type SiteImage, type SiteSettings, type Story, type TreeNode } from "./types";
 
 type Doc = Record<string, unknown> & { _id: string; _type?: string; _order?: string };
@@ -82,6 +83,7 @@ const toMember = (d: Doc): FamilyMember => ({
   treePhoto: fromCms(d.treePhoto),
   heroImage: fromCms(d.heroImage),
   heroStrength: num(d.heroStrength),
+  textLayout: parseTextLayout(d.textLayout),
   gallery: images(d.gallery),
   accentColor: str(d.accentColor),
   sortOrder: str(d._order),
@@ -101,6 +103,7 @@ const toStory = (d: Doc): Story => ({
   authorName: str(d.authorName),
   authorId: refId(d.author),
   peopleIds: refIds(d.people),
+  textLayout: parseTextLayout(d.textLayout),
   sortOrder: str(d._order),
   published: true,
 });
@@ -132,6 +135,7 @@ const toHistory = (d: Doc): HistoryEntry => ({
   image: fromCms(d.image),
   location: str(d.location),
   peopleIds: refIds(d.people),
+  textLayout: parseTextLayout(d.textLayout),
   sortOrder: str(d._order),
   published: true,
 });
@@ -149,6 +153,7 @@ const toSettings = (d: Doc): SiteSettings => ({
   bioFont: str(d.bioFont),
   bioFontStyle: str(d.bioFontStyle),
   bioFontSize: str(d.bioFontSize),
+  textLayout: parseTextLayout(d.textLayout),
   contactEmail: str(d.contactEmail),
   primaryColor: str(d.primaryColor),
   accentColor: str(d.accentColor),

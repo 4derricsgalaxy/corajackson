@@ -16,6 +16,7 @@ import { editableField, editablePage } from "@/lib/cms/sdk";
 import { fullSrc } from "@/lib/content/image";
 import { getAssetIndex, getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
 import { quoteStyle } from "@/components/wix/person/quote-style";
+import { textLayout } from "@/lib/content/text-layout";
 
 export const revalidate = 3600;
 export const dynamicParams = true;
@@ -71,6 +72,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
     ? { docId: parent._id, field: "families", label: `${homeBlock.role ?? "Parent"}:`, value: homeBlock.status ? `${homeBlock.name} (${homeBlock.status})` : homeBlock.name }
     : undefined;
 
+  const t = textLayout(person._id, person.textLayout);
   const hasBio = Array.isArray(person.bio) ? person.bio.length > 0 : Boolean(person.bio);
   // One standard write-up column on every page: exactly as wide as the portrait above it.
   const quoteClass = "wix-person-quote";
@@ -109,7 +111,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
           )}
           <div className="wix-person-cols">
             <div className="wix-person-left">
-              <h1 className="wix-h1 wix-person-title" {...editableField(person._id, "title")}>{person.title}</h1>
+              <h1 className="wix-h1 wix-person-title" {...editableField(person._id, "title")} {...t("name")}>{person.title}</h1>
               {/* portrait + facts float; the quote sits under the portrait and wraps around a tall fact column */}
               <div className="wix-person-bio" style={quoteStyle(settings)}>
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")}>
@@ -117,11 +119,11 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                 </div>
                 <PersonFacts person={person} otherParent={otherParent} />
                 {hasBio ? (
-                  <div className={quoteClass} {...editableField(person._id, "bio")}>
+                  <div className={quoteClass} {...editableField(person._id, "bio")} {...t("write-up")}>
                     <RichText content={person.bio} className="wix-quote" />
                   </div>
                 ) : person.shortBio ? (
-                  <div className={clsx(quoteClass, "wix-quote")} {...editableField(person._id, "shortBio")}>
+                  <div className={clsx(quoteClass, "wix-quote")} {...editableField(person._id, "shortBio")} {...t("write-up")}>
                     <p>{person.shortBio}</p>
                   </div>
                 ) : null}
@@ -135,7 +137,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
 
           {memories.length > 0 && (
             <section className="wix-person-memories" aria-labelledby="wix-person-memories-h">
-              <h2 id="wix-person-memories-h" className="wix-strong wix-person-memories-h">Memories:</h2>
+              <h2 id="wix-person-memories-h" className="wix-strong wix-person-memories-h" {...t("memories-heading")}>Memories:</h2>
               <PhotoSlider photos={memories} label={`Photos of ${person.title}`} />
             </section>
           )}
@@ -143,8 +145,8 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
           <div className="wix-person-navband">
             {personStories.length > 0 && (
               <section className="wix-person-stories" aria-labelledby="wix-person-stories-h">
-                <h2 id="wix-person-stories-h" className="wix-strong">Stories:</h2>
-                <ul>
+                <h2 id="wix-person-stories-h" className="wix-strong" {...t("stories-heading")}>Stories:</h2>
+                <ul {...t("stories-list")}>
                   {personStories.map((s) => (
                     <li key={s._id}><Link href={`/stories/${s.slug}`} className="wix-text-link">{s.title}</Link></li>
                   ))}

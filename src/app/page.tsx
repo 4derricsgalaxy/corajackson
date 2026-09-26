@@ -6,6 +6,7 @@ import { FooterLabel } from "@/components/wix/WixNav";
 import { HomeIntro } from "@/components/wix/home/HomeIntro";
 import { editableField } from "@/lib/cms/sdk";
 import { getFamilyGraph, getSettings } from "@/lib/content/queries";
+import { textLayout } from "@/lib/content/text-layout";
 
 export const revalidate = 3600;
 
@@ -22,6 +23,7 @@ export default async function HomePage() {
   const [settings, graph] = await Promise.all([getSettings(), getFamilyGraph()]);
   const cora = graph.root;
   const edit = (field: string) => (settings._id ? editableField(settings._id, field) : {});
+  const t = textLayout(settings._id, settings.textLayout);
   const portrait = settings.heroImage ?? cora?.portrait;
   const portraitEdit = settings.heroImage ? edit("heroImage") : cora ? editableField(cora._id, "portrait") : {};
 
@@ -53,11 +55,11 @@ export default async function HomePage() {
           </span>
         )}
 
-        <h1 className="wix-home-title" {...edit(settings.heroHeading ? "heroHeading" : "title")}>
+        <h1 className="wix-home-title" {...edit(settings.heroHeading ? "heroHeading" : "title")} {...t("home-title")}>
           {settings.heroHeading ?? settings.title}
         </h1>
 
-        <Link href="/gallery" className="wix-btn-outline wix-home-btn wix-home-btn-meet">
+        <Link href="/gallery" className="wix-btn-outline wix-home-btn wix-home-btn-meet" {...t("home-btn-meet")}>
           Meet the Family
         </Link>
 
@@ -69,13 +71,13 @@ export default async function HomePage() {
           <span className="wix-home-frame-link">{framed}</span>
         )}
 
-        <HomeIntro content={settings.heroIntro} {...edit("heroIntro")} />
+        <HomeIntro content={settings.heroIntro} {...edit("heroIntro")} {...t("home-intro")} />
 
-        <Link href="/family-tree" className="wix-btn-outline wix-home-btn wix-home-btn-tree">
+        <Link href="/family-tree" className="wix-btn-outline wix-home-btn wix-home-btn-tree" {...t("home-btn-tree")}>
           Family Tree
         </Link>
 
-        <div className="wix-home-footer" {...edit("footerText")}>
+        <div className="wix-home-footer" {...edit("footerText")} {...t("home-footer")}>
           <FooterLabel text={settings.footerText} />
         </div>
       </div>
