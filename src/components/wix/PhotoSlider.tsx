@@ -23,8 +23,8 @@ const editAttrs = (p: SliderPhoto) => (p.edit ? editableField(p.edit.docId, p.ed
 
 const THUMB = 133;
 const GAP = 15;
-/** hover-scroll speed in px per second: a medium pace, about one thumbnail a second */
-const HOVER_SPEED = 140;
+/** hover-scroll speed in px per second: a gentle medium pace, a thumbnail every ~1.5 seconds */
+const HOVER_SPEED = 100;
 /** after an arrow click, let its smooth page-scroll finish before hover-scrolling resumes */
 const CLICK_PAUSE_MS = 700;
 
