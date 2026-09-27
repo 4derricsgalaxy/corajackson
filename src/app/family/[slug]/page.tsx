@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
 import { clsx } from "clsx";
 import { RichText } from "@/components/ui/RichText";
@@ -44,6 +45,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const [graph, photos, stories, settings, assets] = await Promise.all([getFamilyGraph(), getPhotos(), getStories(), getSettings(), getAssetIndex()]);
   const person = graph.bySlug.get(slug);
   if (!person) notFound();
+  const editing = (await draftMode()).isEnabled;
 
   // Memories: the member's own gallery, photos tagged with them, and (for Cora and her children) the photos in their
   // line's album that nobody is tagged in. A line photo tagged with someone else belongs on that person's page only.
@@ -139,6 +141,18 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             <section className="wix-person-memories" aria-labelledby="wix-person-memories-h">
               <h2 id="wix-person-memories-h" className="wix-strong wix-person-memories-h" {...t("memories-heading")}>Memories:</h2>
               <PhotoSlider photos={memories} label={`Photos of ${person.title}`} />
+            </section>
+          )}
+          {/* edit mode only: a page with no photos gets a box that opens this member's Extra Memories photos */}
+          {memories.length === 0 && editing && (
+            <section className="wix-person-memories" aria-label="Add photos">
+              <h2 className="wix-strong wix-person-memories-h">Memories:</h2>
+              <div className="wix-add-photos" {...editableField(person._id, "gallery")}>
+                <span className="wix-add-photos-plus" aria-hidden>+</span>
+                <strong>Add photos</strong>
+                <span>No photos on this page yet. Click to upload pictures to {firstName(person)}&apos;s Memories.</span>
+                <span className="wix-add-photos-note">Only editors see this box.</span>
+              </div>
             </section>
           )}
 
