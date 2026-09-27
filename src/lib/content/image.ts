@@ -1,4 +1,5 @@
 import type { NestedImage, SiteImage } from "./types";
+import { cleanCrop, cleanFocus } from "./crop";
 import { imagePosition, type ImageValue } from "../cms/sdk";
 import { parseCmsImage, wixImageUrl } from "../wix/media";
 
@@ -16,7 +17,15 @@ export function fromCms(value: unknown): SiteImage | undefined {
     height: v.height ?? null,
     alt: v.alt ?? null,
     position: imagePosition(v),
+    ...art(v),
   };
+}
+
+/** the crop / hotspot set in the CMS image editor, when there is one */
+function art(v: ImageValue): Pick<SiteImage, "crop" | "focus"> {
+  const crop = cleanCrop(v.crop);
+  const focus = cleanFocus(v.hotspot);
+  return { ...(crop ? { crop } : {}), ...(focus ? { focus } : {}) };
 }
 
 /** An image value stored inside a list item: keep the asset id even when no url was saved with it. */
@@ -25,15 +34,16 @@ export function nestedFromCms(value: unknown): NestedImage | undefined {
   const v = value as ImageValue & { _id?: string; _ref?: string };
   const assetId = v._ref ?? v._id;
   if (!assetId && !v.url) return undefined;
-  return { assetId, url: v.url || undefined, alt: v.alt ?? null, position: imagePosition(v) };
+  return { assetId, url: v.url || undefined, alt: v.alt ?? null, position: imagePosition(v), ...art(v) };
 }
 
 /** Finish a nested image: the fully resolved asset (srcset, size) when the site has it, else the url saved with it. */
 export function resolveImage(img: NestedImage | undefined, assets: Map<string, SiteImage>): SiteImage | undefined {
   if (!img) return undefined;
   const full = img.assetId ? assets.get(img.assetId) : undefined;
-  if (full) return { ...full, alt: img.alt || full.alt, position: img.position ?? full.position };
-  return img.url ? { url: img.url, alt: img.alt, position: img.position, assetId: img.assetId } : undefined;
+  // the crop belongs to where the picture is placed, not to the file: use the nested value's own
+  if (full) return { ...full, alt: img.alt || full.alt, position: img.position ?? full.position, crop: img.crop, focus: img.focus };
+  return img.url ? { url: img.url, alt: img.alt, position: img.position, assetId: img.assetId, crop: img.crop, focus: img.focus } : undefined;
 }
 
 /** Legacy Wix media URI (seed.json) → SiteImage with a CDN srcset. */

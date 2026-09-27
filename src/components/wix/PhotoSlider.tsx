@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type PointerEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { editableField } from "@/lib/cms/sdk";
 
@@ -15,6 +15,8 @@ export interface SliderPhoto {
   caption?: string;
   /** CSS object-position honoring the CMS hotspot */
   position?: string;
+  /** the CMS crop for the square thumbnail (cropStyle); replaces `position` when set */
+  cropStyle?: CSSProperties;
   /** CMS entry this picture comes from; in edit mode a click opens it (field "" = the whole entry) */
   edit?: { docId: string; field: string };
 }
@@ -126,7 +128,7 @@ export function PhotoSlider({ photos, label = "Photos" }: { photos: SliderPhoto[
                   loading="lazy"
                   decoding="async"
                   draggable={false}
-                  style={p.position ? { objectPosition: p.position } : undefined}
+                  style={p.cropStyle ?? (p.position ? { objectPosition: p.position } : undefined)}
                   {...editAttrs(p)}
                 />
               </button>

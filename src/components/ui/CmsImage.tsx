@@ -1,4 +1,5 @@
 import { clsx } from "clsx";
+import { cropStyle } from "@/lib/content/crop";
 import type { SiteImage } from "@/lib/content/types";
 
 interface Props {
@@ -24,7 +25,11 @@ export function CmsImage({ src, alt, width, height, className, priority, sizes, 
     return <div className={clsx("bg-paper-3", className)} aria-hidden style={{ aspectRatio: `${width}/${height ?? width}` }} />;
   }
   const ratio = src.width && src.height ? src.width / src.height : height ? width / height : 4 / 5;
-  const h = height ?? Math.round(width / ratio);
+  // a CMS crop: with no fixed height the box takes the crop's shape, then the picture zooms into it
+  const cropRatio = src.crop ? (ratio * src.crop.width) / src.crop.height : undefined;
+  const h = height ?? Math.round(width / (cropRatio ?? ratio));
+  const crop = cropStyle(src, height ? width / height : (cropRatio ?? ratio));
+  const style = crop ? { ...crop, ...(height ? {} : { aspectRatio: String(cropRatio) }) } : src.position ? { objectPosition: src.position } : undefined;
   return (
     // eslint-disable-next-line @next/next/no-img-element -- served from the CMS CDN on purpose
     <img
@@ -38,7 +43,7 @@ export function CmsImage({ src, alt, width, height, className, priority, sizes, 
       decoding="async"
       fetchPriority={priority ? "high" : "auto"}
       className={className}
-      style={src.position ? { objectPosition: src.position } : undefined}
+      style={style}
       {...edit}
     />
   );

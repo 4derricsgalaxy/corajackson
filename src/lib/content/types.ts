@@ -1,3 +1,4 @@
+import type { ImageCrop, ImageFocus } from "./crop";
 import type { TextLayoutRow } from "./text-layout";
 /** Content types for the site. Source of record is Snackbox CMS. */
 
@@ -11,6 +12,9 @@ export interface SiteImage {
   alt?: string | null;
   /** CSS object-position honoring the CMS hotspot/crop */
   position?: string;
+  /** CMS crop + hotspot (fractions of the picture); cropStyle() zooms the <img> into the crop */
+  crop?: ImageCrop;
+  focus?: ImageFocus;
   /** Snackbox asset id, when known - lets a nested image be matched to its fully resolved copy */
   assetId?: string;
 }
@@ -24,6 +28,8 @@ export interface NestedImage {
   url?: string;
   alt?: string | null;
   position?: string;
+  crop?: ImageCrop;
+  focus?: ImageFocus;
 }
 
 /** Portable Text blocks (Snackbox) or legacy HTML (seed). */

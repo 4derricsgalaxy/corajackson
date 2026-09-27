@@ -14,7 +14,9 @@ import { PersonPortrait } from "@/components/wix/person/PersonPortrait";
 import { firstName } from "@/components/wix/person/parent-note";
 import { PROJECT } from "@/lib/cms/client";
 import { editableField, editablePage } from "@/lib/cms/sdk";
+import { cropStyle } from "@/lib/content/crop";
 import { fullSrc } from "@/lib/content/image";
+import type { SiteImage } from "@/lib/content/types";
 import { getAssetIndex, getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
 import { quoteStyle } from "@/components/wix/person/quote-style";
 import { textLayout } from "@/lib/content/text-layout";
@@ -52,10 +54,10 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const tagged = photos.filter((p) => p.peopleIds?.includes(person._id) || (person.depth <= 1 && p.lineageId === person._id && !p.peopleIds?.length));
   const seen = new Set<string>();
   const memories: SliderPhoto[] = [];
-  const add = (key: string, image: { url: string; srcset?: string; alt?: string | null; position?: string; originalUrl?: string }, edit: SliderPhoto["edit"], caption?: string) => {
+  const add = (key: string, image: SiteImage, edit: SliderPhoto["edit"], caption?: string) => {
     if (!image?.url || seen.has(image.url)) return;
     seen.add(image.url);
-    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position, edit });
+    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position, cropStyle: cropStyle(image, 1), edit });
   };
   // edit mode: a gallery picture opens this member's gallery list, a tagged photo opens its own Photos entry
   (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, { docId: person._id, field: "gallery" }, img.alt || undefined));

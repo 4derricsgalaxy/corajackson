@@ -24,12 +24,14 @@ export function orderPhotos(photos: Photo[]): Photo[] {
  */
 export function toGalleryItems(photos: Photo[], names?: Map<string, string>): GalleryItem[] {
   return photos.map((p) => {
-    const { url, srcset, width, height, alt, position } = p.image;
+    const { url, srcset, width, height, alt, position, crop, focus } = p.image;
     const image: SiteImage = { url };
     if (srcset) image.srcset = srcset;
     if (width && height) { image.width = width; image.height = height; }
     if (alt && alt !== p.title) image.alt = alt;
     if (position) image.position = position;
+    if (crop) image.crop = crop;
+    if (focus) image.focus = focus;
     const item: GalleryItem = { id: p._id, image };
     if (p.title) item.title = p.title;
     if (p.caption && p.caption !== p.title) item.caption = p.caption;
