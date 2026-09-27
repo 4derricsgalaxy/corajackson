@@ -6,6 +6,7 @@ import { FooterLabel, PageNav } from "@/components/wix/WixNav";
 import { initialsOf } from "@/components/wix/tree/TreeFrame";
 import { editableField } from "@/lib/cms/sdk";
 import { getFamilyGraph, getSettings } from "@/lib/content/queries";
+import { textLayout } from "@/lib/content/text-layout";
 import type { TreeNode } from "@/lib/content/types";
 
 export const revalidate = 3600;
@@ -51,7 +52,11 @@ function PersonTile({ member }: { member: TreeNode }) {
       <span className="wix-famidx-tile-photo" {...editableField(member._id, "portrait")}>
         <Portrait member={member} width={99} height={121} />
       </span>
-      <span className="wix-child-name wix-famidx-tile-name" {...editableField(member._id, member.nickname ? "nickname" : "title")}>
+      <span
+        className="wix-child-name wix-famidx-tile-name"
+        {...editableField(member._id, member.nickname ? "nickname" : "title")}
+        {...textLayout(member._id, member.textLayout)("famidx-name", undefined, `Meet the Family name: ${shortName(member)}`)}
+      >
         {shortName(member)}
       </span>
     </Link>
@@ -65,18 +70,19 @@ function PersonTile({ member }: { member: TreeNode }) {
 export default async function FamilyIndexPage() {
   const [settings, graph] = await Promise.all([getSettings(), getFamilyGraph()]);
   const cora = graph.root;
+  const t = textLayout(settings._id, settings.textLayout);
 
   return (
     <WixCanvas minHeight={857} className="wix-famidx-canvas">
       <div className="wix-famidx-body">
-        <h1 className="wix-h1 wix-famidx-title">Meet the Family</h1>
+        <h1 className="wix-h1 wix-famidx-title" {...t("famidx-title", undefined, "Meet the Family title")}>Meet the Family</h1>
 
         {cora && (
           <Link href={`/family/${cora.slug}`} title={cora.title} className="wix-famidx-root">
             <span className="wix-frame wix-famidx-root-frame" {...editableField(cora._id, "portrait")}>
               <Portrait member={cora} width={132} height={193} priority />
             </span>
-            <span className="wix-h2 wix-famidx-root-name" {...editableField(cora._id, "title")}>
+            <span className="wix-h2 wix-famidx-root-name" {...editableField(cora._id, "title")} {...textLayout(cora._id, cora.textLayout)("famidx-name", undefined, `Meet the Family name: ${cora.title}`)}>
               {cora.title}
             </span>
           </Link>
@@ -90,7 +96,7 @@ export default async function FamilyIndexPage() {
                 <span className="wix-famidx-line-photo" {...editableField(line._id, "portrait")}>
                   <Portrait member={line} width={60} height={73} />
                 </span>
-                <h2 className="wix-h2" {...editableField(line._id, "title")}>
+                <h2 className="wix-h2" {...editableField(line._id, "title")} {...textLayout(line._id, line.textLayout)("famidx-name", undefined, `Meet the Family name: ${line.title}`)}>
                   {line.title}
                 </h2>
               </Link>
@@ -106,9 +112,9 @@ export default async function FamilyIndexPage() {
         })}
       </div>
 
-      <PageNav className="wix-famidx-nav" />
+      <PageNav className="wix-famidx-nav" layout={t("famidx-nav", undefined, "Home + Family Tree buttons (Meet the Family)")} />
       <div {...(settings._id ? editableField(settings._id, "footerText") : {})}>
-        <FooterLabel text={settings.footerText} />
+        <FooterLabel text={settings.footerText} layout={t("famidx-footer", undefined, "Footer label (Meet the Family)")} />
       </div>
     </WixCanvas>
   );

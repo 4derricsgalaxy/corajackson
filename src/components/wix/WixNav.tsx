@@ -23,9 +23,9 @@ export function FamilyTreeButton({ className }: { className?: string }) {
 }
 
 /** The home icon stacked over the Family Tree pill, centered — the footer nav of every inner page. */
-export function PageNav({ className }: { className?: string }) {
+export function PageNav({ className, layout }: { className?: string; layout?: object }) {
   return (
-    <nav aria-label="Page" className={clsx("flex flex-col items-center gap-[17px]", className)}>
+    <nav aria-label="Page" className={clsx("flex flex-col items-center gap-[17px]", className)} {...layout}>
       <HomeButton />
       <FamilyTreeButton />
     </nav>
