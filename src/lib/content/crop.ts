@@ -67,3 +67,11 @@ export function cropStyle(
     clipPath: `inset(${pct(y.origin * k)} ${pct((1 - x.origin) * k)} ${pct((1 - y.origin) * k)} ${pct(x.origin * k)})`,
   };
 }
+
+/** Single-image fields the on-page Crop tool may set a crop on (a Photos entry's picture is `image`). */
+export const CROP_FIELDS = ["portrait", "treePhoto", "heroImage", "coverImage", "image"];
+
+/** Marks an <img> with its saved crop so the Crop tool can start from it. */
+export function cropAttr(crop: ImageCrop | undefined): Record<string, string> {
+  return crop ? { "data-crop": JSON.stringify(crop) } : {};
+}

@@ -1,43 +1,21 @@
 import { revalidatePath } from "next/cache";
-import { cookies, draftMode } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { requireEditor } from "@/lib/cms/editor-auth";
 import { cleanRow, DOC_RE, KEY_RE, parseTextLayout, type TextLayoutRow } from "@/lib/content/text-layout";
 
-// Save endpoint for the on-page Layout tool. Only an editor who is signed in to on-site editing
-// (draft mode + the overlay token cookie set by /api/snackbox-edit, re-checked against the CMS) can
-// write, and only the `textLayout` field of the entries it names. The write itself uses the
-// server-side SNACKBOX_WRITE_TOKEN, which never reaches the browser.
+// Save endpoint for the on-page Layout tool. Only a signed-in editor (requireEditor) can write, and only
+// the `textLayout` field of the entries it names.
 
-const TOKEN_COOKIE = "sbx-edit-token";
 const MAX_DOCS = 60;
 const MAX_ROWS = 120;
 
 type Change = { key: string; row: TextLayoutRow | null };
 
 export async function POST(req: NextRequest) {
-  const cms = (process.env.NEXT_PUBLIC_SNACKBOX_URL ?? "").replace(/\/$/, "");
-  const project = process.env.NEXT_PUBLIC_SNACKBOX_PROJECT ?? "";
-  const writeToken = process.env.SNACKBOX_WRITE_TOKEN ?? "";
-  if (!cms || !project || !writeToken) {
-    return NextResponse.json({ error: "Saving layouts is not set up on this site yet (SNACKBOX_WRITE_TOKEN is missing)." }, { status: 503 });
-  }
-
   // 1. editor check: draft mode on AND the overlay token still valid at the CMS
-  const editToken = (await cookies()).get(TOKEN_COOKIE)?.value;
-  if (!(await draftMode()).isEnabled || !editToken) {
-    return NextResponse.json({ error: "Open the page in Snackbox edit mode first." }, { status: 401 });
-  }
-  const session = await fetch(`${cms}/api/overlay/session?project=${encodeURIComponent(project)}`, {
-    headers: { Authorization: `Bearer ${editToken}` },
-    cache: "no-store",
-    redirect: "error",
-    signal: AbortSignal.timeout(10_000),
-  })
-    .then((r) => (r.ok ? (r.json() as Promise<{ ok?: boolean }>) : null))
-    .catch(() => null);
-  if (!session?.ok) {
-    return NextResponse.json({ error: "Your edit session has expired. Reopen the page from Snackbox and try again." }, { status: 403 });
-  }
+  const editor = await requireEditor("layouts");
+  if (editor instanceof NextResponse) return editor;
+  const { api, auth } = editor;
 
   // 2. validate the request: { changes: { [docId]: [{ key, row | null }] } }
   const body = (await req.json().catch(() => null)) as { changes?: Record<string, unknown> } | null;
@@ -56,8 +34,6 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. merge into each entry's current rows (other items' rows are kept) and write them all at once
-  const api = `${cms}/api/v1/${project}`;
-  const auth = { Authorization: `Bearer ${writeToken}` };
   const mutations = [];
   for (const [docId, rows] of changes) {
     const doc = await fetch(`${api}/doc/${encodeURIComponent(docId)}`, { headers: auth, cache: "no-store" })

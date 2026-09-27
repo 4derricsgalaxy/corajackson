@@ -57,7 +57,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const add = (key: string, image: SiteImage, edit: SliderPhoto["edit"], caption?: string) => {
     if (!image?.url || seen.has(image.url)) return;
     seen.add(image.url);
-    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position, cropStyle: cropStyle(image, 1), edit });
+    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position, cropStyle: cropStyle(image, 1), crop: image.crop, edit });
   };
   // edit mode: a gallery picture opens this member's gallery list, a tagged photo opens its own Photos entry
   (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, { docId: person._id, field: "gallery" }, img.alt || undefined));

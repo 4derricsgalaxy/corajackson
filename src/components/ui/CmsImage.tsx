@@ -1,5 +1,5 @@
 import { clsx } from "clsx";
-import { cropStyle } from "@/lib/content/crop";
+import { cropAttr, cropStyle } from "@/lib/content/crop";
 import type { SiteImage } from "@/lib/content/types";
 
 interface Props {
@@ -44,6 +44,7 @@ export function CmsImage({ src, alt, width, height, className, priority, sizes, 
       fetchPriority={priority ? "high" : "auto"}
       className={className}
       style={style}
+      {...cropAttr(src.crop)}
       {...edit}
     />
   );
