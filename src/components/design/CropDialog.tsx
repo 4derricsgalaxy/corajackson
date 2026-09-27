@@ -4,14 +4,43 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import { cleanCrop, CROP_FIELDS, cropStyle, type ImageCrop } from "@/lib/content/crop";
 
 /**
- * The on-page Crop tool (edit mode only). "Crop" outlines every picture that can be cropped; click one to
- * open it whole with a crop box shaped like the frame it sits in. Drag the box to move it, drag a corner to
- * size it (arrow keys nudge, Shift = bigger steps), then "Save crop" writes it to that picture's field
- * through /api/image-crop and reloads. The frame then zooms into the cropped area (lib/content/crop.ts).
- * While it is on, clicks never reach links or the Snackbox click-to-edit overlay.
+ * The crop window (edit mode only), opened by the Design tool with openCrop(img): the whole picture with a
+ * crop box shaped like the frame it sits in. Drag the box to move it, drag a corner to size it (arrow keys
+ * nudge, Shift = bigger steps). For a CMS picture "Save crop" writes the crop to that picture's field through
+ * /api/image-crop and reloads; for a picture added with the Design tool it hands the crop back (onSave).
+ * The frame then zooms into the cropped area (lib/content/crop.ts).
  */
 
-type Target = { doc: string; field: string; src: string; sw: number; sh: number; frame: number; crop?: ImageCrop; label: string };
+type Target = {
+  doc: string;
+  field: string;
+  src: string;
+  sw: number;
+  sh: number;
+  frame: number;
+  crop?: ImageCrop;
+  label: string;
+  onSave?: (crop: ImageCrop | null, size: { w: number; h: number }) => void;
+};
+
+const OPEN_EVENT = "pd-crop";
+type OpenDetail = { img: HTMLImageElement; onSave?: Target["onSave"] };
+
+/** Open the crop window for a picture; without onSave it must be a CMS picture (canCrop). */
+export function openCrop(img: HTMLImageElement, onSave?: Target["onSave"]) {
+  window.dispatchEvent(new CustomEvent<OpenDetail>(OPEN_EVENT, { detail: { img, onSave } }));
+}
+
+/** true when the picture's crop can be saved to its CMS field */
+export const canCrop = (img: HTMLImageElement) => Boolean(targetOf(img));
+
+const savedCrop = (img: HTMLImageElement) => {
+  try {
+    return cleanCrop(JSON.parse(img.getAttribute("data-crop") ?? "null"));
+  } catch {
+    return undefined;
+  }
+};
 type Box = { x: number; y: number; w: number; h: number };
 type Drag = { mode: "move" | "corner"; pointerId: number; sx: number; sy: number; start: Box; hx: 0 | 1; hy: 0 | 1 };
 
@@ -28,18 +57,12 @@ function targetOf(img: HTMLImageElement): Target | null {
   if (!/^https?:/.test(img.currentSrc || img.src)) return null;
   const r = img.getBoundingClientRect();
   if (r.width < 8 || r.height < 8) return null;
-  let crop: ImageCrop | undefined;
-  try {
-    crop = cleanCrop(JSON.parse(img.getAttribute("data-crop") ?? "null"));
-  } catch {
-    crop = undefined;
-  }
   const label = img.alt || host.getAttribute("aria-label") || "this picture";
-  return { doc, field, src: largestSrc(img), sw: 0, sh: 0, frame: r.width / r.height, crop, label };
+  return { doc, field, src: largestSrc(img), sw: 0, sh: 0, frame: r.width / r.height, crop: savedCrop(img), label };
 }
 
 /** the biggest file in the <img>'s srcset (thumbnails may load a small one) */
-function largestSrc(img: HTMLImageElement): string {
+export function largestSrc(img: HTMLImageElement): string {
   let best = img.currentSrc || img.src;
   let bestW = 0;
   for (const part of (img.getAttribute("srcset") ?? "").split(",")) {
@@ -48,14 +71,6 @@ function largestSrc(img: HTMLImageElement): string {
     if (url && n > bestW) { best = url; bestW = n; }
   }
   return best;
-}
-
-/** the croppable picture under the pointer (thumbnails sit inside buttons that take the click) */
-function imgAt(e: MouseEvent): HTMLImageElement | null {
-  for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
-    if (el instanceof HTMLImageElement && el.classList.contains("ic-croppable")) return el;
-  }
-  return null;
 }
 
 /** where the crop box starts: the saved crop, else the part of the picture the frame shows now (centered) */
@@ -76,39 +91,23 @@ function stageSize(t: Target) {
   return { width: Math.round(t.sw * s), height: Math.round(t.sh * s) };
 }
 
-export function ImageCropTool() {
-  const [picking, setPicking] = useState(false);
+export function CropDialog() {
   const [target, setTarget] = useState<Target | null>(null);
   const [box, setBox] = useState<Box>({ x: 0, y: 0, w: 1, h: 1 });
   const [free, setFree] = useState(false); // false = the box keeps the frame's shape
   const [status, setStatus] = useState<{ kind: "idle" | "saving" | "error"; text?: string }>({ kind: "idle" });
   const stage = useRef<HTMLDivElement>(null);
-  const ui = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
 
-  // picking: outline croppable pictures and shield the page; a click on one opens it
+  // openCrop(img): load the whole picture first, its true size drives the crop box
   useEffect(() => {
-    if (!picking || target) return;
-    const marked: HTMLImageElement[] = [];
-    for (const img of Array.from(document.querySelectorAll<HTMLImageElement>("img"))) {
-      if (targetOf(img)) {
-        img.classList.add("ic-croppable");
-        marked.push(img);
-      }
-    }
-    const inUi = (t: EventTarget | null) => t instanceof Node && Boolean(ui.current?.contains(t));
-    const shield = (e: Event) => {
-      if (inUi(e.target)) return;
-      e.stopPropagation();
-      e.preventDefault();
-    };
-    const onClick = (e: MouseEvent) => {
-      if (inUi(e.target)) return;
-      shield(e);
-      const img = imgAt(e);
-      const t = img ? targetOf(img) : null;
+    const onOpen = (e: Event) => {
+      const { img, onSave } = (e as CustomEvent<OpenDetail>).detail;
+      const r = img.getBoundingClientRect();
+      const t: Target | null = onSave
+        ? { doc: "", field: "", src: largestSrc(img), sw: 0, sh: 0, frame: r.width / Math.max(1, r.height), crop: savedCrop(img), label: img.alt || "this picture", onSave }
+        : targetOf(img);
       if (!t) return;
-      // open once the whole picture has loaded: its true size drives the crop box
       const full = new Image();
       full.onload = () => {
         const ready = { ...t, sw: full.naturalWidth, sh: full.naturalHeight };
@@ -117,28 +116,12 @@ export function ImageCropTool() {
         setFree(Boolean(t.crop && Math.abs((t.crop.width * ready.sw) / (t.crop.height * ready.sh) - t.frame) > 0.02));
         setStatus({ kind: "idle" });
       };
-      full.onerror = () => setStatus({ kind: "error", text: "Could not load that picture." });
+      full.onerror = () => window.alert("Could not load that picture.");
       full.src = t.src;
     };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setPicking(false);
-    };
-    for (const t of ["pointerdown", "mousedown", "dblclick", "auxclick", "dragstart"]) window.addEventListener(t, shield, true);
-    window.addEventListener("click", onClick, true);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      for (const t of ["pointerdown", "mousedown", "dblclick", "auxclick", "dragstart"]) window.removeEventListener(t, shield, true);
-      window.removeEventListener("click", onClick, true);
-      window.removeEventListener("keydown", onKey);
-      marked.forEach((img) => img.classList.remove("ic-croppable"));
-    };
-  }, [picking, target]);
-
-  // while the tool is open the Layout button steps aside (and vice versa, in CSS)
-  useEffect(() => {
-    document.documentElement.classList.toggle("ic-picking", picking);
-    return () => document.documentElement.classList.remove("ic-picking");
-  }, [picking]);
+    window.addEventListener(OPEN_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_EVENT, onOpen);
+  }, []);
 
   // width → height for the frame's shape (fractions of the picture)
   const lockH = useCallback((w: number) => (target ? (w * (target.sw / target.sh)) / target.frame : w), [target]);
@@ -219,6 +202,11 @@ export function ImageCropTool() {
 
   const save = async (crop: ImageCrop | null) => {
     if (!target) return;
+    if (target.onSave) {
+      target.onSave(crop, { w: target.sw, h: target.sh });
+      setTarget(null);
+      return;
+    }
     setStatus({ kind: "saving", text: "Saving…" });
     try {
       const res = await fetch("/api/image-crop", {
@@ -234,23 +222,7 @@ export function ImageCropTool() {
     }
   };
 
-  if (!picking) {
-    return (
-      <button type="button" className="ic-launch" onClick={() => setPicking(true)} title="Crop a picture on this page">
-        Crop
-      </button>
-    );
-  }
-
-  if (!target) {
-    return (
-      <div ref={ui} className="tl-toolbar ic-bar" role="toolbar" aria-label="Crop a picture">
-        <span className="tl-item">Click the picture you want to crop</span>
-        {status.text && <span className="tl-msg tl-err">{status.text}</span>}
-        <button type="button" onClick={() => setPicking(false)}>Done</button>
-      </div>
-    );
-  }
+  if (!target) return null;
 
   const whole = box.w > 0.995 && box.h > 0.995;
   const crop: ImageCrop = { left: box.x, top: box.y, width: box.w, height: box.h };
@@ -260,7 +232,7 @@ export function ImageCropTool() {
   const corners: [0 | 1, 0 | 1][] = [[0, 0], [1, 0], [0, 1], [1, 1]];
 
   return (
-    <div ref={ui} className="ic-modal" role="dialog" aria-modal aria-label={`Crop ${target.label}`}>
+    <div className="ic-modal" role="dialog" aria-modal aria-label={`Crop ${target.label}`}>
       <div className="ic-panel">
         <div className="ic-head">
           <strong>Crop: {target.label}</strong>
@@ -286,7 +258,7 @@ export function ImageCropTool() {
                 <span
                   key={`${hx}${hy}`}
                   className="ic-handle"
-                  style={{ left: pct(hx), top: pct(hy), cursor: hx === hy ? "nwse-resize" : "nesw-resize" }}
+                  style={{ left: `calc(${pct(hx)} - ${hx * 18}px)`, top: `calc(${pct(hy)} - ${hy * 18}px)`, cursor: hx === hy ? "nwse-resize" : "nesw-resize" }}
                   onPointerDown={(e) => onDown(e, "corner", hx, hy)}
                 />
               ))}

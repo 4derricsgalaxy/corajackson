@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
 import { cleanCrop, CROP_FIELDS } from "@/lib/content/crop";
-import { DOC_RE } from "@/lib/content/text-layout";
+const DOC_RE = /^[A-Za-z0-9_.:-]{1,80}$/;
 
 // Save endpoint for the on-page Crop tool. Only a signed-in editor (requireEditor) can write, and only the
 // crop on one single-image field of the entry it names. Field "" = a Photos entry's own picture (`image`).

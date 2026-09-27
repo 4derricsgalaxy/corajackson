@@ -2,7 +2,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { CmsImage } from "@/components/ui/CmsImage";
 import { editableField } from "@/lib/cms/sdk";
-import { textLayout } from "@/lib/content/text-layout";
+import { keyPart, pd } from "@/lib/design/keys";
 import type { TreeNode } from "@/lib/content/types";
 import type { TreeSlot } from "./slots";
 
@@ -39,7 +39,7 @@ export function TreeFrame({ member, slot, inFlow }: { member: TreeNode; slot: Tr
       title={member.title}
       aria-label={member.title}
       className={clsx("wix-tree-slot", inFlow && "wix-tree-slot-flow")}
-      style={vars}
+      {...pd(keyPart(member._id))("frame", vars, `Tree frame: ${label}`)}
     >
       <span className="wix-tree-frame" style={{ backgroundColor: slot.color }}>
         <span className="wix-tree-photo" {...editableField(member._id, member.treePhoto?.url ? "treePhoto" : "portrait")}>
@@ -52,7 +52,7 @@ export function TreeFrame({ member, slot, inFlow }: { member: TreeNode; slot: Tr
           )}
         </span>
       </span>
-      <span className="wix-tree-name" aria-hidden {...textLayout(member._id, member.textLayout)("tree-name", undefined, `Tree name: ${label}`)}>
+      <span className="wix-tree-name" aria-hidden {...pd(keyPart(member._id))("name", undefined, `Tree name: ${label}`)}>
         {label}
       </span>
     </Link>

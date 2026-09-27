@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 
 const TOKEN_COOKIE = "sbx-edit-token";
 
-export type EditorWrite = { api: string; auth: { Authorization: string } };
+export type EditorWrite = { api: string; project: string; auth: { Authorization: string } };
 
 /** The CMS write endpoint + auth for a verified editor, or the error response to send back. */
 export async function requireEditor(what: string): Promise<EditorWrite | NextResponse> {
@@ -33,5 +33,5 @@ export async function requireEditor(what: string): Promise<EditorWrite | NextRes
   if (!session?.ok) {
     return NextResponse.json({ error: "Your edit session has expired. Reopen the page from Snackbox and try again." }, { status: 403 });
   }
-  return { api: `${cms}/api/v1/${project}`, auth: { Authorization: `Bearer ${writeToken}` } };
+  return { api: `${cms}/api/v1/${project}`, project, auth: { Authorization: `Bearer ${writeToken}` } };
 }

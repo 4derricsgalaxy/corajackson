@@ -6,7 +6,7 @@ import { FooterLabel } from "@/components/wix/WixNav";
 import { HomeIntro } from "@/components/wix/home/HomeIntro";
 import { editableField } from "@/lib/cms/sdk";
 import { getFamilyGraph, getSettings } from "@/lib/content/queries";
-import { textLayout } from "@/lib/content/text-layout";
+import { pd } from "@/lib/design/keys";
 
 export const revalidate = 3600;
 
@@ -23,12 +23,12 @@ export default async function HomePage() {
   const [settings, graph] = await Promise.all([getSettings(), getFamilyGraph()]);
   const cora = graph.root;
   const edit = (field: string) => (settings._id ? editableField(settings._id, field) : {});
-  const t = textLayout(settings._id, settings.textLayout);
+  const t = pd();
   const portrait = settings.heroImage ?? cora?.portrait;
   const portraitEdit = settings.heroImage ? edit("heroImage") : cora ? editableField(cora._id, "portrait") : {};
 
   const framed = (
-    <span className="wix-frame wix-home-frame" {...portraitEdit}>
+    <span className="wix-frame wix-home-frame" {...portraitEdit} {...t("home-portrait")}>
       <CmsImage
         src={portrait}
         alt={cora?.title ?? "Cora Mae Jackson"}
@@ -42,14 +42,14 @@ export default async function HomePage() {
   );
 
   return (
-    <WixCanvas className="wix-home-canvas">
+    <WixCanvas path="/" className="wix-home-canvas">
       <div className="wix-home-stage">
         {settings.treeImage ? (
-          <span className="wix-home-tree" aria-hidden {...edit("treeImage")}>
+          <span className="wix-home-tree" aria-hidden {...edit("treeImage")} {...t("home-tree")}>
             <CmsImage src={settings.treeImage} alt="" width={789} height={606} priority sizes="(max-width: 980px) 100vw, 789px" />
           </span>
         ) : (
-          <span className="wix-home-tree" aria-hidden>
+          <span className="wix-home-tree" aria-hidden {...t("home-tree")}>
             {/* eslint-disable-next-line @next/next/no-img-element -- static decorative artwork */}
             <img src="/wix/tree-art.png" alt="" width={789} height={606} />
           </span>

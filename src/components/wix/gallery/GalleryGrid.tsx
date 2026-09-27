@@ -18,10 +18,12 @@ interface Props {
   /** Snackbox edit mode: no "Show More" paging, and a label (title + people tagged) under each tile */
   editing?: boolean;
   className?: string;
+  /** Design tool key for the whole grid */
+  piece?: object;
 }
 
 /** The original Wix pro-gallery: square-cornered cover tiles, a "Show More" text link, and a lightbox. */
-export function GalleryGrid({ items, pageSize = 15, variant = "grid", editable, editing, className }: Props) {
+export function GalleryGrid({ items, pageSize = 15, variant = "grid", editable, editing, className, piece }: Props) {
   const [visible, setVisible] = useState(pageSize);
   const [open, setOpen] = useState<number | null>(null);
   const close = useCallback(() => setOpen(null), []);
@@ -30,7 +32,7 @@ export function GalleryGrid({ items, pageSize = 15, variant = "grid", editable, 
   const [w, h] = variant === "thumbs" ? [133, 133] : [182, 155];
 
   return (
-    <div className={className}>
+    <div className={className} {...piece}>
       <ul className={clsx(variant === "thumbs" ? "wix-gallery-thumbs" : "wix-gallery-grid", editing && "is-editing")}>
         {shown.map((item, i) => (
           <li key={item.id}>

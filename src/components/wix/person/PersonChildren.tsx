@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CmsImage } from "@/components/ui/CmsImage";
 import { editableField } from "@/lib/cms/sdk";
 import { resolveImage } from "@/lib/content/image";
-import { keyPart, textLayout } from "@/lib/content/text-layout";
+import { keyPart, pd } from "@/lib/design/keys";
 import type { SiteImage, TreeNode } from "@/lib/content/types";
 import { PersonPortrait } from "./PersonPortrait";
 import { firstName, groupByParentNote, nameKey, parseParentNote, titleCase, type ParsedParentNote } from "./parent-note";
@@ -40,7 +40,7 @@ interface Props {
  * in the block naming the same other parent, else in a block built from the child's `parentNote`.
  */
 export function PersonChildren({ person, byId, assets }: Props) {
-  const t = textLayout(person._id, person.textLayout);
+  const t = pd();
   // the original showed a childhood photo here, not the portrait from the child's own page
   const ownPhoto = (child: TreeNode): Tile => ({
     child,
@@ -99,7 +99,7 @@ export function PersonChildren({ person, byId, assets }: Props) {
     <section className="wix-person-children" aria-labelledby="wix-person-children-h">
       <h2 id="wix-person-children-h" className="wix-h2 wix-person-children-h" {...t("children-heading")}>Children</h2>
       {shown.map((block) => (
-        <div key={block.key} className="wix-person-group">
+        <div key={block.key} className="wix-person-group" {...t(`group-${keyPart(block.key)}`, undefined, `Children group${block.note ? `: ${block.note.name}` : ""}`)}>
           {block.note && (
             <p className="wix-note wix-person-group-note" {...(block.partnerField === "families" ? editableField(person._id, "families") : {})} {...t(`note-${keyPart(block.key)}`, undefined, `Note: ${block.note.name}`)}>
               <span className="wix-person-note-line"><b>{block.note.role}:</b> {block.note.name}</span>
@@ -110,17 +110,17 @@ export function PersonChildren({ person, byId, assets }: Props) {
           )}
           <div className="wix-person-group-body">
             {block.partnerPhoto?.url && (
-              <span className="wix-person-partner" {...editableField(person._id, block.partnerField)}>
+              <span className="wix-person-partner" {...editableField(person._id, block.partnerField)} {...t(`partner-${keyPart(block.key)}`, undefined, `Photo: ${block.note?.name ?? "partner"}`)}>
                 <CmsImage src={block.partnerPhoto} alt={block.partnerPhoto.alt || block.note?.name || ""} width={148} height={168} sizes="74px" />
               </span>
             )}
             {block.tiles.length > 0 ? (
               <ul className="wix-person-kids">
                 {block.tiles.map(({ child, image, edit }) => (
-                  <li key={child._id}>
+                  <li key={child._id} {...t(`kidtile-${keyPart(child._id)}`, undefined, `Child: ${firstName(child)}`)}>
                     <Link href={`/family/${child.slug}`} className="wix-person-kid">
                       {/* in edit mode the photo opens wherever it comes from: this member's list, or the child's own entry */}
-                      <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)}>
+                      <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)} {...t(`kidphoto-${keyPart(child._id)}`, undefined, `Child photo: ${firstName(child)}`)}>
                         <PersonPortrait image={image} name={child.title} width={99} height={121} />
                       </span>
                       <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")} {...t(`kid-${keyPart(child._id)}`, undefined, `Child name: ${firstName(child)}`)}>{firstName(child)}</span>

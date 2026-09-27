@@ -43,7 +43,7 @@ export const poppins = Poppins({
 
 /**
  * Choices for Site settings > "Write-up font" (the text under each person's portrait) and for the
- * on-page Layout tool (lib/content/text-layout.ts). Not preloaded: a browser only downloads what a page uses.
+ * on-page Design tool (lib/design/model.ts). Not preloaded: a browser only downloads what a page uses.
  */
 export const bioPlayfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], weight: ["400", "500", "700"], display: "swap", preload: false, variable: "--font-bio-playfair" });
 export const bioLora = Lora({ subsets: ["latin"], style: ["normal", "italic"], weight: ["400", "700"], display: "swap", preload: false, variable: "--font-bio-lora" });

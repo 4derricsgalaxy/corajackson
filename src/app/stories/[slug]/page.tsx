@@ -8,7 +8,7 @@ import { GalleryGrid } from "@/components/wix/gallery/GalleryGrid";
 import { editableField } from "@/lib/cms/sdk";
 import { getFamilyGraph, getSettings, getStories } from "@/lib/content/queries";
 import type { TreeNode } from "@/lib/content/types";
-import { textLayout } from "@/lib/content/text-layout";
+import { pd } from "@/lib/design/keys";
 
 export const revalidate = 3600;
 
@@ -29,11 +29,11 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
   const people = (story.peopleIds ?? []).map((id) => graph.byId.get(id)).filter((p): p is TreeNode => Boolean(p));
   const author = story.authorId ? graph.byId.get(story.authorId) : undefined;
   const date = formatStoryDate(story.storyDate);
-  const t = textLayout(story._id, story.textLayout);
+  const t = pd();
   const gallery = (story.gallery ?? []).map((image, i) => ({ id: `${story._id}-g${i}`, image, title: image.alt || undefined }));
 
   return (
-    <ContentPage footerText={settings.footerText}>
+    <ContentPage path={`/stories/${story.slug}`} footerText={settings.footerText}>
       <article className="wix-content-article">
         <ContentTitle {...editableField(story._id, "title")} {...t("title")}>{story.title}</ContentTitle>
         {(story.authorName || author || date) && (
@@ -53,18 +53,18 @@ export default async function StoryPage({ params }: { params: Promise<{ slug: st
           </p>
         )}
         {story.coverImage && (
-          <div className="wix-content-cover" {...editableField(story._id, "coverImage")}>
+          <div className="wix-content-cover" {...editableField(story._id, "coverImage")} {...t("cover")}>
             <CmsImage src={story.coverImage} alt={story.coverImage.alt || story.title} width={640} priority sizes="(max-width: 979px) 92vw, 640px" className="wix-photo wix-content-img" />
           </div>
         )}
         <WixRichText content={story.body} size={13} className="wix-content-body" {...editableField(story._id, "body")} {...t("body")} />
         {gallery.length > 0 && (
-          <div {...editableField(story._id, "gallery")}>
+          <div {...editableField(story._id, "gallery")} {...t("gallery")}>
             <GalleryGrid items={gallery} variant="thumbs" className="wix-content-gallery" />
           </div>
         )}
-        <PeopleLinks people={people} label="In this story:" className="wix-content-people-story" />
-        <p className="wix-content-back">
+        <PeopleLinks people={people} label="In this story:" className="wix-content-people-story" piece={t("people")} />
+        <p className="wix-content-back" {...t("back")}>
           <Link href="/stories" className="wix-text-link">← All stories</Link>
         </p>
       </article>

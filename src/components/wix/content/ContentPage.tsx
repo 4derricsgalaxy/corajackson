@@ -8,12 +8,12 @@ import type { TreeNode } from "@/lib/content/types";
  * The original History / Stories page frame: a 651px-tall white canvas, content starting
  * top-left, then the home icon + Family Tree pill centered and the footer label bottom-left.
  */
-export function ContentPage({ children, footerText, className }: { children: React.ReactNode; footerText?: string; className?: string }) {
+export function ContentPage({ children, path, footerText, className }: { children: React.ReactNode; path?: string; footerText?: string; className?: string }) {
   return (
-    <WixCanvas minHeight={651} className={clsx("wix-content-page", footerLabelText(footerText).length > 40 && "wix-content-long-footer", className)}>
-      <div className="wix-content-main">{children}</div>
-      <PageNav className="wix-content-nav" />
-      <FooterLabel text={footerText} />
+    <WixCanvas path={path} minHeight={651} className={clsx("wix-content-page", footerLabelText(footerText).length > 40 && "wix-content-long-footer", className)}>
+      <div className="wix-content-main" data-pd="content" data-pd-label="Page content">{children}</div>
+      <PageNav className="wix-content-nav" layout={{ "data-pd": "nav" }} />
+      <FooterLabel text={footerText} layout={{ "data-pd": "footer" }} />
     </WixCanvas>
   );
 }
@@ -28,10 +28,10 @@ export function ContentTitle({ children, className, ...rest }: React.HTMLAttribu
 }
 
 /** Tagged family members as small underlined links to their pages. */
-export function PeopleLinks({ people, label, className }: { people: TreeNode[]; label?: string; className?: string }) {
+export function PeopleLinks({ people, label, className, piece }: { people: TreeNode[]; label?: string; className?: string; piece?: object }) {
   if (!people.length) return null;
   return (
-    <p className={clsx("wix-content-people", className)}>
+    <p className={clsx("wix-content-people", className)} {...piece}>
       {label && <span className="wix-content-people-label">{label} </span>}
       {people.map((p, i) => (
         <span key={p._id}>

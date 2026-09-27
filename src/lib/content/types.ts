@@ -1,5 +1,4 @@
 import type { ImageCrop, ImageFocus } from "./crop";
-import type { TextLayoutRow } from "./text-layout";
 /** Content types for the site. Source of record is Snackbox CMS. */
 
 /** A resolved image, ready for <img>: CDN url + srcset built by the CMS. */
@@ -62,8 +61,6 @@ export interface FamilyMember {
   heroImage?: SiteImage;
   /** Background strength, 0-100 (percent). Empty = the standard 45. Applies to the hero image or the default leaves. */
   heroStrength?: number;
-  /** On-page Layout tool: font / size / position per text item (see text-layout.ts) */
-  textLayout?: TextLayoutRow[];
   gallery?: SiteImage[];
   accentColor?: string;
   sortOrder?: number | string;
@@ -99,7 +96,6 @@ export interface Story {
   authorName?: string;
   authorId?: string | null;
   peopleIds?: string[];
-  textLayout?: TextLayoutRow[];
   sortOrder?: number | string;
   published?: boolean;
 }
@@ -127,7 +123,6 @@ export interface HistoryEntry {
   image?: SiteImage;
   location?: string;
   peopleIds?: string[];
-  textLayout?: TextLayoutRow[];
   sortOrder?: number | string;
   published?: boolean;
 }
@@ -146,7 +141,6 @@ export interface SiteSettings {
   bioFont?: string;
   bioFontStyle?: string;
   bioFontSize?: string;
-  textLayout?: TextLayoutRow[];
   contactEmail?: string;
   primaryColor?: string;
   accentColor?: string;

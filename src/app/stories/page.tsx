@@ -4,7 +4,7 @@ import { CmsImage } from "@/components/ui/CmsImage";
 import { ContentPage, ContentTitle, formatStoryDate } from "@/components/wix/content/ContentPage";
 import { editableField } from "@/lib/cms/sdk";
 import { getFamilyGraph, getSettings, getStories } from "@/lib/content/queries";
-import { textLayout } from "@/lib/content/text-layout";
+import { keyPart, pd } from "@/lib/design/keys";
 
 export const revalidate = 3600;
 export const metadata: Metadata = { title: "Stories", description: "Memories and stories told by the Jackson family." };
@@ -12,19 +12,19 @@ export const metadata: Metadata = { title: "Stories", description: "Memories and
 export default async function StoriesPage() {
   const [stories, graph, settings] = await Promise.all([getStories(), getFamilyGraph(), getSettings()]);
   return (
-    <ContentPage footerText={settings.footerText}>
-      <ContentTitle {...textLayout(settings._id, settings.textLayout)("stories-title", undefined, "Stories page title")}>Family Stories</ContentTitle>
+    <ContentPage path="/stories" footerText={settings.footerText}>
+      <ContentTitle {...pd()("title", undefined, "Page title")}>Family Stories</ContentTitle>
       {stories.length > 0 ? (
         <ul className="wix-content-list">
           {stories.map((s) => {
             const teller = s.authorName ?? (s.authorId ? graph.byId.get(s.authorId)?.title : undefined);
             const date = formatStoryDate(s.storyDate);
-            const t = textLayout(s._id, s.textLayout);
+            const t = pd(keyPart(s._id));
             const meta = [teller ? `Told by ${teller}` : undefined, date].filter(Boolean).join(" · ");
             return (
-              <li key={s._id} className="wix-content-story">
+              <li key={s._id} className="wix-content-story" {...t("story", undefined, `Story: ${s.title}`)}>
                 {s.coverImage && (
-                  <Link href={`/stories/${s.slug}`} className="wix-content-story-thumb" tabIndex={-1} aria-hidden {...editableField(s._id, "coverImage")}>
+                  <Link href={`/stories/${s.slug}`} className="wix-content-story-thumb" tabIndex={-1} aria-hidden {...editableField(s._id, "coverImage")} {...t("cover", undefined, `Cover: ${s.title}`)}>
                     <CmsImage src={s.coverImage} alt="" width={133} height={133} sizes="133px" className="wix-photo" />
                   </Link>
                 )}

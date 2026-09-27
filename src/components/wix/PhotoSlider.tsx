@@ -42,7 +42,7 @@ function Chevron({ dir }: { dir: "prev" | "next" }) {
 }
 
 /** The original Wix "slider gallery": a strip of square thumbs with chevrons, plus a simple lightbox. */
-export function PhotoSlider({ photos, label = "Photos" }: { photos: SliderPhoto[]; label?: string }) {
+export function PhotoSlider({ photos, label = "Photos", piece }: { photos: SliderPhoto[]; label?: string; piece?: object }) {
   const windowRef = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
   const [open, setOpen] = useState<number | null>(null);
@@ -109,7 +109,7 @@ export function PhotoSlider({ photos, label = "Photos" }: { photos: SliderPhoto[
   if (!photos.length) return null;
 
   return (
-    <div className="wix-slider" role="group" aria-label={label}>
+    <div className="wix-slider" role="group" aria-label={label} {...piece}>
       {overflowing && (
         <button type="button" className="wix-slider-arrow wix-slider-prev" aria-label="Previous photos" onClick={() => page(-1)} onPointerEnter={(e) => startHover(-1, e)} onPointerLeave={stopHover}>
           <Chevron dir="prev" />

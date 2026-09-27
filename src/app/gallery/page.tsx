@@ -13,5 +13,5 @@ export default async function GalleryPage() {
   const albums = albumsFor(graph, photos);
   const editing = (await draftMode()).isEnabled;
   const names = editing ? new Map([...graph.byId.values()].map((m) => [m._id, m.nickname ?? m.title.split(" ")[0]])) : undefined;
-  return <GalleryShell items={toGalleryItems(orderPhotos(photos), names)} albums={albums} footerText={settings.footerText} settingsId={settings._id} settingsLayout={settings.textLayout} editing={editing} />;
+  return <GalleryShell items={toGalleryItems(orderPhotos(photos), names)} albums={albums} footerText={settings.footerText} editing={editing} />;
 }

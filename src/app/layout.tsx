@@ -4,8 +4,8 @@ import Script from "next/script";
 import "./globals.css";
 import { bioFontVariables, clarendon, didot, lulo, poppins, proxima } from "./fonts";
 import { getSettings } from "@/lib/content/queries";
-import { TextLayoutEditor } from "@/components/wix/layout/TextLayoutEditor";
-import { ImageCropTool } from "@/components/wix/layout/ImageCropTool";
+import { CropDialog } from "@/components/design/CropDialog";
+import { DesignEditor } from "@/components/design/DesignEditor";
 import { EditShortcut } from "@/components/wix/layout/EditShortcut";
 
 export const revalidate = 3600;
@@ -28,14 +28,14 @@ export async function generateMetadata(): Promise<Metadata> {
  * a gray surround, and navigation lives at the bottom of each page.
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // on-site editing (draft mode) also gets the Layout tool (drag text, change fonts) and the Crop tool
+  // on-site editing (draft mode) also gets the Design tool: move, resize, restyle and add things on any page
   const editing = (await draftMode()).isEnabled;
   return (
     <html lang="en" className={`${proxima.variable} ${didot.variable} ${lulo.variable} ${clarendon.variable} ${poppins.variable} ${bioFontVariables}`}>
       <body>
         <main className="relative px-0 pb-[52px] pt-0 md:pt-[5px]">{children}</main>
-        {editing && <TextLayoutEditor />}
-        {editing && <ImageCropTool />}
+        {editing && <DesignEditor />}
+        {editing && <CropDialog />}
         {/* Ctrl+E: edit the page you are on */}
         <EditShortcut editing={editing} />
         {/* Snackbox on-page editing: inert for visitors, activates for signed-in editors */}
