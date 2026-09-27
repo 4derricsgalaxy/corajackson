@@ -11,19 +11,30 @@ export async function GET() {
   if (editor instanceof NextResponse) return editor;
   const [graph, photos, stories] = await Promise.all([getFamilyGraph(), getPhotos(), getStories()]);
 
-  const pictures: { t: string; u: string; s?: string; w?: number | null; h?: number | null }[] = [];
-  const seen = new Set<string>();
-  const add = (t: string, img?: { url?: string; srcset?: string; width?: number | null; height?: number | null } | null) => {
-    if (!img?.url || seen.has(img.url)) return;
-    seen.add(img.url);
-    pictures.push({ t, u: img.url, s: img.srcset, w: img.width, h: img.height });
+  // t = title, p = people tagged in it (from the Photos entry's "People pictured"; a portrait is its person)
+  type Pic = { t: string; p: string[]; u: string; s?: string; w?: number | null; h?: number | null };
+  const byUrl = new Map<string, Pic>();
+  const add = (t: string, people: string[], img?: { url?: string; srcset?: string; width?: number | null; height?: number | null } | null) => {
+    if (!img?.url) return;
+    const had = byUrl.get(img.url);
+    if (had) {
+      had.p = [...new Set([...had.p, ...people])];
+      return;
+    }
+    byUrl.set(img.url, { t, p: people, u: img.url, s: img.srcset, w: img.width, h: img.height });
+  };
+  const nameOf = (id: string) => {
+    const m = graph.byId.get(id);
+    return m ? (m.nickname && m.nickname !== m.title ? `${m.title} (${m.nickname})` : m.title) : undefined;
   };
   for (const m of graph.all) {
-    add(`${m.title} (portrait)`, m.portrait);
-    add(`${m.title} (childhood)`, m.treePhoto);
-    add(`${m.title} (page background)`, m.heroImage);
+    const who = [nameOf(m._id) ?? m.title];
+    add(`${m.title} (portrait)`, who, m.portrait);
+    add(`${m.title} (childhood)`, who, m.treePhoto);
+    add(`${m.title} (page background)`, [], m.heroImage);
   }
-  for (const p of photos) add(p.title, p.image);
+  for (const p of photos) add(p.title, (p.peopleIds ?? []).map(nameOf).filter((n): n is string => Boolean(n)), p.image);
+  const pictures = [...byUrl.values()];
 
   const pages = [
     { path: "/", title: "Home", group: "Main pages" },

@@ -1204,3 +1204,5 @@ html.pd-editing .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-on
 .pd-pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
 .pd-pages fieldset { display: flex; flex-direction: column; gap: 4px; border: 1px solid #3f3f3f; border-radius: 8px; padding: 8px; max-height: 320px; overflow: auto; }
 .pd-pages legend { font-weight: 700; padding: 0 4px; }
+.pd-ui .pd-thumb .pd-thumb-tags { color: #93c5fd; }
+.pd-ui .pd-thumb .pd-thumb-none { color: #737373; font-style: italic; }

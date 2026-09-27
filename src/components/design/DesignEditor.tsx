@@ -22,7 +22,7 @@ import { designStore, isDirty, useDesignState } from "./store";
 
 type Sel = { kind: "piece"; key: string } | { kind: "added"; id: string } | { kind: "page" } | null;
 type Picked = { src: string; srcset?: string; w?: number | null; h?: number | null; alt?: string };
-type Library = { pictures: { t: string; u: string; s?: string; w?: number | null; h?: number | null }[]; pages: { path: string; title: string; group: string }[] };
+type Library = { pictures: { t: string; p: string[]; u: string; s?: string; w?: number | null; h?: number | null }[]; pages: { path: string; title: string; group: string }[] };
 type Modal = null | { kind: "picture"; purpose: "add" | "replace" | "page" } | { kind: "copy" } | { kind: "versions" };
 
 const CLIP_KEY = "cj-design-clipboard";
@@ -912,6 +912,7 @@ function PicturePicker({ onPick, onClose }: { onPick: (p: Picked) => void; onClo
   const [lib, setLib] = useState<Library | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const [untagged, setUntagged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [url, setUrl] = useState("");
   useEffect(() => {
@@ -919,8 +920,15 @@ function PicturePicker({ onPick, onClose }: { onPick: (p: Picked) => void; onClo
   }, []);
   const matches = useMemo(() => {
     const words = q.toLowerCase().split(/\s+/).filter(Boolean);
-    return (lib?.pictures ?? []).filter((p) => words.every((w) => p.t.toLowerCase().includes(w))).slice(0, 150);
-  }, [lib, q]);
+    return (lib?.pictures ?? [])
+      .filter((p) => !untagged || !p.p.length)
+      .filter((p) => {
+        const text = `${p.t} ${p.p.join(" ")}`.toLowerCase();
+        return words.every((w) => text.includes(w));
+      })
+      .slice(0, 150);
+  }, [lib, q, untagged]);
+  const untaggedCount = useMemo(() => (lib?.pictures ?? []).filter((p) => !p.p.length).length, [lib]);
   const fromComputer = async (file?: File) => {
     if (!file) return;
     setBusy(true);
@@ -951,14 +959,20 @@ function PicturePicker({ onPick, onClose }: { onPick: (p: Picked) => void; onClo
       {err && <p className="pd-msg pd-err">{err}</p>}
       {tab === "family" && (
         <>
-          <input className="pd-search" type="search" placeholder="Search by name or title…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          <input className="pd-search" type="search" placeholder="Search by who is in it or by title…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+          {lib && (
+            <label className="pd-check">
+              <input type="checkbox" checked={untagged} onChange={(e) => setUntagged(e.target.checked)} /> Only photos with no one tagged ({untaggedCount})
+            </label>
+          )}
           {!lib && !err && <p className="pd-hint">Loading pictures…</p>}
           <div className="pd-grid">
             {matches.map((p) => (
-              <button key={p.u} type="button" className="pd-thumb" title={p.t} onClick={() => onPick({ src: p.u, srcset: p.s, w: p.w, h: p.h, alt: p.t })}>
+              <button key={p.u} type="button" className="pd-thumb" title={p.p.length ? `${p.t}\nTagged: ${p.p.join(", ")}` : `${p.t}\nNo one tagged`} onClick={() => onPick({ src: p.u, srcset: p.s, w: p.w, h: p.h, alt: p.t })}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- CMS thumbnail */}
                 <img src={p.u} alt="" loading="lazy" />
                 <span>{p.t}</span>
+                <span className={p.p.length ? "pd-thumb-tags" : "pd-thumb-tags pd-thumb-none"}>{p.p.length ? p.p.join(", ") : "No one tagged"}</span>
               </button>
             ))}
           </div>
