@@ -56,13 +56,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bad page address." }, { status: 400 });
   }
   const design: Design | null = body?.design === null ? null : cleanDesign(body?.design);
-  const data = design && !isEmptyDesign(design) ? JSON.stringify(design) : "";
+  const baseData = design && !isEmptyDesign(design) ? JSON.stringify(design) : "";
 
   const mutations = [];
   try {
     for (const path of new Set(paths)) {
       const id = designDocId(path);
       const doc = await readDoc(editor, id);
+      // a person's page keeps its one background on the Snackbox entry (Page background), never in the design
+      let data = baseData;
+      if (design && /^\/family\/[^/]+$/.test(path) && design.page.image) {
+        const page = { ...design.page };
+        delete page.image; delete page.imageFit; delete page.imageOpacity;
+        const d = { ...design, page };
+        data = isEmptyDesign(d) ? "" : JSON.stringify(d);
+      }
       const history = parseHistory(doc?.history);
       if (doc?.data && doc.data !== data) history.unshift({ at: new Date().toISOString(), data: doc.data });
       const fields = { title: path, data, history: JSON.stringify(history.slice(0, KEEP)) };
@@ -84,5 +92,5 @@ export async function POST(req: NextRequest) {
   }
   revalidateTag(cacheTags.type(editor.project, DESIGN_TYPE), { expire: 0 });
   revalidatePath("/", "layout");
-  return NextResponse.json({ ok: true, saved: mutations.length, design: data ? JSON.parse(data) : null });
+  return NextResponse.json({ ok: true, saved: mutations.length, design: baseData ? JSON.parse(baseData) : null });
 }

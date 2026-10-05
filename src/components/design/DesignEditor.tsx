@@ -597,7 +597,7 @@ export function DesignEditor() {
           <button type="button" className="pd-mini" onClick={() => setPanelLeft((v) => !v)} title="Move this panel to the other side">⇆</button>
         </div>
         {sel?.kind === "page" || !sel ? (
-          <PagePanel design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); setSel({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
+          <PagePanel personPage={/^\/family\/[^/]+$/.test(path ?? "")} design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); setSel({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
         ) : (
           <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} design={s.design} apply={apply} commit={commit} setSel={setSel} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} />
         )}
@@ -810,8 +810,8 @@ function ItemPanel({ sel, design, apply, commit, setSel, onReplace, onSnackbox }
   );
 }
 
-function PagePanel({ design, commit, onPicture, onCopy, onVersions, onDefault, onShow, selected }: {
-  design: Design; commit: (d: Design) => void; onPicture: () => void; onCopy: () => void; onVersions: () => void; onDefault: () => void; onShow: (key: string) => void; selected: boolean;
+function PagePanel({ personPage, design, commit, onPicture, onCopy, onVersions, onDefault, onShow, selected }: {
+  personPage: boolean; design: Design; commit: (d: Design) => void; onPicture: () => void; onCopy: () => void; onVersions: () => void; onDefault: () => void; onShow: (key: string) => void; selected: boolean;
 }) {
   const page = design.page;
   const setPage = (patch: Partial<Design["page"]>, live = false) => {
@@ -831,11 +831,20 @@ function PagePanel({ design, commit, onPicture, onCopy, onVersions, onDefault, o
       <details open className="pd-sec">
         <summary>Background</summary>
         <ColorField label="Page color" value={page.color} fallback="#ffffff" onLive={(v) => setPage({ color: v }, true)} onReset={() => setPage({ color: undefined })} />
-        <div className="pd-row pd-wrap">
-          <button type="button" onClick={onPicture}>{page.image ? "Change background picture" : "Background picture…"}</button>
-          {page.image && <button type="button" onClick={() => setPage({ image: undefined, imageFit: undefined, imageOpacity: undefined })}>Remove</button>}
-        </div>
-        {page.image && (
+        {/* a person's page has ONE background, kept on their Snackbox entry (Page background + Background strength),
+            so editors never end up with two pictures where the Snackbox one seems to "not work" */}
+        {personPage ? (
+          <p className="pd-hint">
+            This person&apos;s background picture is set in Snackbox: open their entry and change <strong>Page background</strong> and <strong>Background strength (%)</strong>.
+            {page.image && <> <button type="button" onClick={() => setPage({ image: undefined, imageFit: undefined, imageOpacity: undefined })}>Remove the old Design background</button></>}
+          </p>
+        ) : (
+          <div className="pd-row pd-wrap">
+            <button type="button" onClick={onPicture}>{page.image ? "Change background picture" : "Background picture…"}</button>
+            {page.image && <button type="button" onClick={() => setPage({ image: undefined, imageFit: undefined, imageOpacity: undefined })}>Remove</button>}
+          </div>
+        )}
+        {page.image && !personPage && (
           <>
             <div className="pd-row">
               <select value={page.imageFit ?? "cover"} onChange={(e) => setPage({ imageFit: e.target.value as "cover" | "contain" | "tile" })} aria-label="Background fit">

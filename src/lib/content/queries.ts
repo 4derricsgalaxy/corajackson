@@ -240,11 +240,20 @@ export const getFamilyGraph = cache(async (): Promise<FamilyGraph> => {
   const members = await getMembers();
   const byId = new Map<string, TreeNode>();
   for (const m of members) byId.set(m._id, { ...m, children: [], depth: 0 });
-  let root: TreeNode | null = null;
+  const tops: TreeNode[] = [];
   for (const node of byId.values()) {
     const parent = node.parentId ? byId.get(node.parentId) : undefined;
     if (parent) parent.children.push(node);
-    else if (!root || node.generation < root.generation) root = node;
+    else tops.push(node);
+  }
+  // The top of the tree is the parentless person with the most descendants (Cora), so a new entry saved
+  // without a Parent can never take her place; it just gets its own page until its Parent is set.
+  const size = (n: TreeNode): number => n.children.reduce((sum, c) => sum + 1 + size(c), 0);
+  let root: TreeNode | null = null;
+  let best = -1;
+  for (const n of tops) {
+    const s = size(n);
+    if (s > best || (s === best && root && n.generation < root.generation)) { root = n; best = s; }
   }
   const bySlug = new Map<string, TreeNode>();
   const all: TreeNode[] = [];
