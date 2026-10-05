@@ -14,6 +14,8 @@
     "@wix/image-kit": "^1.125.0",
     "@wix/sdk": "^1.21.16",
     "clsx": "^2.1.1",
+    "heic-convert": "2.1.0",
+    "heic-to": "1.6.5",
     "next": "16.3.5",
     "react": "19.2.8",
     "react-dom": "19.2.8"

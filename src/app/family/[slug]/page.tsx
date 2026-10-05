@@ -8,6 +8,7 @@ import { RichText } from "@/components/ui/RichText";
 import { WixCanvas } from "@/components/wix/WixCanvas";
 import { FooterLabel, PageNav } from "@/components/wix/WixNav";
 import { PhotoSlider, type SliderPhoto } from "@/components/wix/PhotoSlider";
+import { PhotoDrop } from "@/components/photos/PhotoDrop";
 import { PersonChildren } from "@/components/wix/person/PersonChildren";
 import { PersonFacts } from "@/components/wix/person/PersonFacts";
 import { PersonPortrait } from "@/components/wix/person/PersonPortrait";
@@ -96,6 +97,8 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   return (
     <div className="wix-person-wrap" data-sbx-page={PROJECT} {...editablePage(pageDocuments)}>
       <Link href={up.href} className="wix-side-tab wix-person-side-tab" {...t("side-tab")}>{up.label}</Link>
+      {/* edit mode: drop photos anywhere on the page (or press Add photos) to add them to this person's Memories */}
+      {editing && <PhotoDrop target={{ kind: "person", id: person._id, name: person.title, first: firstName(person) }} />}
 
       <WixCanvas path={`/family/${person.slug}`} minHeight={560} className="wix-person">
         {/* no children: the standard "solo" page modeled on Emrick's (big portrait toward the middle, no Children column) */}
@@ -161,7 +164,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
               <div className="wix-add-photos" {...editableField(person._id, "gallery")}>
                 <span className="wix-add-photos-plus" aria-hidden>+</span>
                 <strong>Add photos</strong>
-                <span>No photos on this page yet. Click to upload pictures to {firstName(person)}&apos;s Memories.</span>
+                <span>No photos on this page yet. Drag photos anywhere onto this page, or press <b>Add photos</b> (bottom right).</span>
                 <span className="wix-add-photos-note">Only editors see this box.</span>
               </div>
             </section>

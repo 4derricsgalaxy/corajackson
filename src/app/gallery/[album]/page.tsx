@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { draftMode } from "next/headers";
 import { notFound } from "next/navigation";
+import { PhotoDrop } from "@/components/photos/PhotoDrop";
 import { GalleryShell } from "@/components/wix/gallery/GalleryShell";
 import { orderPhotos, toGalleryItems } from "@/components/wix/gallery/types";
 import { getFamilyGraph, getPhotos, getSettings } from "@/lib/content/queries";
@@ -28,7 +29,11 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
   if (!a) notFound();
   const editing = (await draftMode()).isEnabled;
   const names = editing ? new Map([...graph.byId.values()].map((m) => [m._id, m.nickname ?? m.title.split(" ")[0]])) : undefined;
+  // a family's album (or Cora's) takes dropped photos in edit mode: they are filed under that family line
+  const head = a.memberSlug ? graph.bySlug.get(a.memberSlug) : undefined;
   return (
+    <>
+    {editing && head && <PhotoDrop target={{ kind: "line", id: head._id, name: a.title }} />}
     <GalleryShell
       items={toGalleryItems(orderPhotos(a.photos), names)}
       editing={editing}
@@ -37,5 +42,6 @@ export default async function AlbumPage({ params }: { params: Promise<{ album: s
       title={a.title}
       footerText={settings.footerText}
     />
+    </>
   );
 }

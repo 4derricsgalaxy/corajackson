@@ -1229,3 +1229,23 @@ html.pd-editing .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-on
 .pd-pages legend { font-weight: 700; padding: 0 4px; }
 .pd-ui .pd-thumb .pd-thumb-tags { color: #93c5fd; }
 .pd-ui .pd-thumb .pd-thumb-none { color: #737373; font-style: italic; }
+
+/* ---- "Add photos" (edit mode): button above Design, full-window drop zone, progress panel ---- */
+.pd-ui.photo-add-launch { position: fixed; z-index: 2147483000; right: 16px; bottom: 64px; height: 40px; padding: 0 16px; border-radius: 8px; border: 0; background: #2f6fed; color: #fff; font-weight: 600; box-shadow: 0 4px 16px #0004; cursor: pointer; }
+.pd-ui.photo-add-launch:hover:not(:disabled) { background: #1f5ad6; }
+.pd-ui.photo-add-launch:disabled { opacity: .6; cursor: progress; }
+.pd-ui.photo-drop-zone { position: fixed; inset: 0; z-index: 2147483600; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgb(20 40 90 / .55); pointer-events: none; }
+.pd-ui.photo-drop-zone > div { display: flex; flex-direction: column; gap: 6px; align-items: center; text-align: center; max-width: 560px; padding: 40px 36px; border: 3px dashed #fff; border-radius: 16px; background: rgb(0 0 0 / .35); color: #fff; font-size: 15px; }
+.pd-ui.photo-drop-zone strong { font-size: 24px; }
+.pd-ui.photo-add-panel { position: fixed; z-index: 2147483100; right: 16px; bottom: 112px; width: min(360px, calc(100vw - 32px)); max-height: min(60vh, 520px); overflow-y: auto; padding: 12px; border-radius: 10px; background: #1f1f1f; box-shadow: 0 8px 28px #0006; }
+.photo-add-head { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+.photo-add-head button { height: 26px; width: 26px; padding: 0; flex: none; }
+.photo-add-panel ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.photo-add-panel li { display: flex; gap: 10px; align-items: center; padding: 6px; border-radius: 6px; background: #2a2a2a; }
+.photo-add-panel li img, .photo-add-thumb { width: 44px; height: 44px; flex: none; object-fit: cover; border-radius: 4px; background: #3a3a3a; }
+.photo-add-panel li > span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.photo-add-panel li b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.photo-add-panel li small { color: #bdbdbd; }
+.photo-add-panel li.photo-add-done small { color: #8fe3a2; }
+.photo-add-panel li.photo-add-draft small, .photo-add-panel li.photo-add-error small { color: #ffb4a8; }
+.photo-add-note { margin: 10px 2px 2px; color: #cfcfcf; font-size: 12px; }

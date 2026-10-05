@@ -1,5 +1,6 @@
 "use client";
 
+import { HeicDecodeError, PHOTO_ACCEPT, preparePhoto } from "@/lib/photos/prepare";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cleanDesign, emptyDesign, FONTS, isEmptyDesign, newId, type Added, type Design, type Look } from "@/lib/design/model";
 import { PIECE_LABELS } from "@/lib/design/keys";
@@ -90,22 +91,13 @@ function writeClip(from: string, items: Added[]) {
   }
 }
 
-/** big pictures are shrunk in the browser before upload (the site accepts up to ~4 MB) */
+/** every picture (iPhone HEIC too) becomes an upright JPEG of at most 2400px before upload (shared with "Add photos") */
 async function prepareUpload(file: File): Promise<{ blob: Blob; name: string; w: number; h: number }> {
-  const bmp = await createImageBitmap(file);
-  const { width: w, height: h } = bmp;
-  const scale = Math.min(1, 2400 / Math.max(w, h));
-  if (scale === 1 && file.size < 3_500_000) {
-    bmp.close();
-    return { blob: file, name: file.name, w, h };
+  try {
+    return await preparePhoto(file);
+  } catch (err) {
+    throw new Error(err instanceof HeicDecodeError ? "This browser can't read that iPhone photo. Use “Add photos”, or save it as a JPG first." : (err as Error).message);
   }
-  const c = document.createElement("canvas");
-  c.width = Math.round(w * scale);
-  c.height = Math.round(h * scale);
-  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close();
-  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not read that picture."))), "image/jpeg", 0.88));
-  return { blob, name: file.name.replace(/\.\w+$/, "") + ".jpg", w: c.width, h: c.height };
 }
 
 async function upload(file: File): Promise<Picked> {
@@ -991,7 +983,7 @@ function PicturePicker({ onPick, onClose }: { onPick: (p: Picked) => void; onClo
       {tab === "computer" && (
         <div className="pd-col">
           <p className="pd-hint">The picture is added to the Snackbox media library, then placed on the page. Big photos are made smaller first.</p>
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" disabled={busy} onChange={(e) => fromComputer(e.target.files?.[0])} />
+          <input type="file" accept={PHOTO_ACCEPT} disabled={busy} onChange={(e) => fromComputer(e.target.files?.[0])} />
           {busy && <p className="pd-hint">Uploading…</p>}
           <p className="pd-hint">Tip: you can also copy a picture anywhere and press Ctrl+V on the page.</p>
         </div>
