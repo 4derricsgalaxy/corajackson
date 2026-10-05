@@ -291,6 +291,17 @@ body {
 .wix-person-photo { object-fit: cover; color: rgba(255, 255, 255, 0.7); font: 400 10px/1.2 Arial, Helvetica, sans-serif; }
 .wix-person-portrait .wix-person-photo { width: 160px; height: 215px; }
 
+/* ---- members with no children: one standard page, modeled on Emrick's Design-tool layout ----
+   desktop only (phones keep the single column). The other-parent line is hidden as on every hand-made solo page. */
+@media (min-width: 980px) {
+  .wix-person-solo .wix-person-left { width: auto; }
+  .wix-person-solo .wix-person-right { display: none; }
+  .wix-person-solo .wix-person-bio { width: 376px; margin: 117px 0 0 272px; }
+  .wix-person-solo .wix-person-portrait .wix-person-photo { width: 243px; height: 327px; }
+  .wix-person-solo .wix-person-quote { width: 243px; }
+}
+.wix-person-solo [data-pd="fact-families"] { display: none; }
+
 .wix-person-placeholder {
   display: inline-flex;
   align-items: center;

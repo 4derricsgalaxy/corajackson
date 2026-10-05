@@ -98,7 +98,8 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
       <Link href={up.href} className="wix-side-tab wix-person-side-tab" {...t("side-tab")}>{up.label}</Link>
 
       <WixCanvas path={`/family/${person.slug}`} minHeight={560} className="wix-person">
-        <article className="wix-person-body">
+        {/* no children: the standard "solo" page modeled on Emrick's (big portrait toward the middle, no Children column) */}
+        <article className={clsx("wix-person-body", person.children.length === 0 && "wix-person-solo")}>
           {/* page art: the member's own Page background if the CMS has one; else the autumn leaves on Joanne's page only
               (the page the template was modeled on), else none. In edit mode an empty page still gets an invisible
               full-page target, so clicking the background opens the Page background field to add one. */}
@@ -127,7 +128,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
               {/* portrait + facts float; the quote sits under the portrait and wraps around a tall fact column */}
               <div className="wix-person-bio" {...t("bio-block", quoteStyle(settings), "Portrait, facts and write-up")}>
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")} {...t("portrait")}>
-                  <PersonPortrait image={person.portrait} name={person.title} width={160} height={215} priority />
+                  <PersonPortrait image={person.portrait} name={person.title} width={person.children.length === 0 ? 243 : 160} height={person.children.length === 0 ? 327 : 215} priority />
                 </div>
                 <PersonFacts person={person} otherParent={otherParent} />
                 {hasBio ? (
