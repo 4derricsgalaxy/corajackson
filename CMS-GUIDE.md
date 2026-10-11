@@ -65,18 +65,21 @@ On any page of the site, press **Ctrl+E** (Cmd+E on a Mac).
 
 The shortcut only works in a browser that has been used to edit the site at least once, so visitors keep their browser's normal Ctrl+E.
 
-## Move text and change fonts (the Layout button)
+## Change words, move things, change fonts (the Design button)
 
-On any page opened for editing from Snackbox, a **Layout** button sits in the bottom-right corner.
+On any page opened for editing from Snackbox, a **Design** button sits in the bottom-right corner.
 
-1. Press **Layout**. Every text item you can change gets a dashed blue outline, and links and click-to-edit pause.
-2. **Move:** drag the text where you want it. For fine moves, click it and use the arrow keys (1px; hold Shift for 10px).
-3. **Font:** click the text, then use the toolbar: font, size (− / +), **B** bold, *I* italic, color. **Reset** puts that one item back to normal.
-4. Changed items turn orange. **Save layout** saves them and reloads the page (the change goes live right away). **Undo all** throws away unsaved changes. **Done** leaves Layout mode. ⇅ moves the toolbar to the top if it covers something.
+**Who can change what:** each family member invited to Snackbox can design **their own page only** (the page their invite email is linked to). Owners and team members can design every page. On someone else's page the Design bar says so and offers **Go to my page**.
 
-What can be changed: on a person's page, the name, each fact (Born, Place...), the write-up, the Children / Memories / Stories headings, the notes above each group of children, each child's name, and "No Children". On the home page: the title, intro, both buttons and the footer label. On a story: title, "Told by" line and the story text. On the Stories and History pages: the page title, plus each story's or entry's title, byline or location, excerpt and text.
+**Change, replace or delete words** (labels like "Born:", "Place:", "Life & Work:", "Mother:", "Marital Status:", the Children / Memories / Stories headings, each child's name, "No Children", the side tab, the Family Tree button and the footer words):
 
-Moved text doesn't push anything else around, so check that it doesn't cover something, and look at the page on a phone too. Each page's settings are saved in its own entry under **Text layout (fonts and positions)**. Delete a row there to put that text back to normal.
+1. Press **Design**, then **double-click** the words. The **Words** box on the right opens with them selected — just type the new words.
+2. The page changes as you type. **Original words** puts the built-in words back; **Delete words** takes them off the page (**Bring back** undoes it); **Undo** (Ctrl+Z) works too.
+3. Press **Save** (Ctrl+S). Visitors see it right away. The change is for that page only.
+
+The facts themselves (dates, places, work), the name and the write-up are the person's Snackbox entry: click them outside Design mode (or **Edit in Snackbox** in the Design panel). Empty Born / Place / Life & Work show as "Click to add" only while editing.
+
+The Design tool also moves, resizes, restyles (font, size, bold, color, fill, border), cuts / copies / pastes pieces between pages, adds text boxes and pictures, and sets the page background. Moves and sizes apply on computer-width screens; phones re-flow the page. **Page → Versions** brings back an earlier save.
 
 ## Add a new family member
 

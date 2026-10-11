@@ -2,7 +2,8 @@ import Link from "next/link";
 import { CmsImage } from "@/components/ui/CmsImage";
 import { editableField } from "@/lib/cms/sdk";
 import { resolveImage } from "@/lib/content/image";
-import { keyPart, pd } from "@/lib/design/keys";
+import { keyPart, pd, pdWords } from "@/lib/design/keys";
+import type { Look } from "@/lib/design/model";
 import type { SiteImage, TreeNode } from "@/lib/content/types";
 import { PersonPortrait } from "./PersonPortrait";
 import { firstName, groupByParentNote, nameKey, parseParentNote, titleCase, type ParsedParentNote } from "./parent-note";
@@ -29,6 +30,8 @@ interface Props {
   byId: Map<string, TreeNode>;
   /** resolved images by asset id - finishes the photos stored inside the list */
   assets: Map<string, SiteImage>;
+  /** this page's Design-tool changes (re-worded captions) */
+  design?: Record<string, Look>;
 }
 
 /**
@@ -39,8 +42,9 @@ interface Props {
  * photo each child gets HERE. A child whose Parent is this member but who is not listed still shows:
  * in the block naming the same other parent, else in a block built from the child's `parentNote`.
  */
-export function PersonChildren({ person, byId, assets }: Props) {
+export function PersonChildren({ person, byId, assets, design }: Props) {
   const t = pd();
+  const w = pdWords(design);
   // the original showed a childhood photo here, not the portrait from the child's own page
   const ownPhoto = (child: TreeNode): Tile => ({
     child,
@@ -97,14 +101,14 @@ export function PersonChildren({ person, byId, assets }: Props) {
 
   return (
     <section className="wix-person-children" aria-labelledby="wix-person-children-h">
-      <h2 id="wix-person-children-h" className="wix-h2 wix-person-children-h" {...t("children-heading")}>Children</h2>
+      <h2 id="wix-person-children-h" className="wix-h2 wix-person-children-h" {...w("children-heading", "Children")} />
       {shown.map((block) => (
         <div key={block.key} className="wix-person-group" {...t(`group-${keyPart(block.key)}`, undefined, `Children group${block.note ? `: ${block.note.name}` : ""}`)}>
           {block.note && (
             <p className="wix-note wix-person-group-note" {...(block.partnerField === "families" ? editableField(person._id, "families") : {})} {...t(`note-${keyPart(block.key)}`, undefined, `Note: ${block.note.name}`)}>
-              <span className="wix-person-note-line"><b>{block.note.role}:</b> {block.note.name}</span>
+              <span className="wix-person-note-line"><b {...w(`role-${keyPart(block.key)}`, `${block.note.role}:`, `Label: ${block.note.role}`)} /> {block.note.name}</span>
               {block.note.status && (
-                <span className="wix-person-note-line"><b>Marital Status:</b> {block.note.status}</span>
+                <span className="wix-person-note-line"><b {...w(`statuslabel-${keyPart(block.key)}`, "Marital Status:", "Label: Marital Status")} /> {block.note.status}</span>
               )}
             </p>
           )}
@@ -123,13 +127,13 @@ export function PersonChildren({ person, byId, assets }: Props) {
                       <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)} {...t(`kidphoto-${keyPart(child._id)}`, undefined, `Child photo: ${firstName(child)}`)}>
                         <PersonPortrait image={image} name={child.title} width={99} height={121} />
                       </span>
-                      <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")} {...t(`kid-${keyPart(child._id)}`, undefined, `Child name: ${firstName(child)}`)}>{firstName(child)}</span>
+                      <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")} {...w(`kid-${keyPart(child._id)}`, firstName(child), `Child name: ${firstName(child)}`)} />
                     </Link>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className="wix-person-nokids" {...t(`nokids-${keyPart(block.key)}`, undefined, "No Children")}>No Children</p>
+              <p className="wix-person-nokids" {...w(`nokids-${keyPart(block.key)}`, "No Children", "No Children")} />
             )}
           </div>
         </div>

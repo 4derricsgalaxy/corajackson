@@ -1167,6 +1167,8 @@ html.pd-editing .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-on
 .pd-ui button[aria-pressed="true"] { background: #2f6fed; border-color: #2f6fed; }
 .pd-ui .pd-primary { background: #2f6fed; border-color: #2f6fed; font-weight: 700; }
 .pd-ui .pd-primary:hover:not(:disabled) { background: #4a82f2; }
+.pd-ui a.pd-link { display: inline-flex; align-items: center; height: 30px; padding: 0 10px; border: 1px solid #2f6fed; border-radius: 6px; color: #fafafa; text-decoration: none; white-space: nowrap; }
+.pd-ui textarea[data-pd-words-input] { width: 100%; box-sizing: border-box; padding: 6px 8px; resize: vertical; }
 .pd-ui select, .pd-ui input[type="number"], .pd-ui input[type="text"], .pd-ui input[type="url"], .pd-ui input[type="search"] { height: 30px; padding: 0 6px; }
 .pd-ui input[type="color"] { width: 34px; height: 30px; padding: 2px; }
 .pd-ui textarea { width: 100%; padding: 6px; resize: vertical; box-sizing: border-box; }

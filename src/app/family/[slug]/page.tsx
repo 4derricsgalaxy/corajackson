@@ -20,7 +20,8 @@ import { fullSrc } from "@/lib/content/image";
 import type { SiteImage } from "@/lib/content/types";
 import { getAssetIndex, getFamilyGraph, getPhotos, getSettings, getStories } from "@/lib/content/queries";
 import { quoteStyle } from "@/components/wix/person/quote-style";
-import { pd } from "@/lib/design/keys";
+import { pd, pdWords } from "@/lib/design/keys";
+import { getDesign } from "@/lib/design/server";
 
 export const revalidate = 3600;
 
@@ -81,6 +82,9 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
     : undefined;
 
   const t = pd();
+  // captions (labels, headings, buttons, child names) can be re-worded per page with the Design tool
+  const design = (await getDesign(`/family/${person.slug}`))?.items;
+  const w = pdWords(design);
   const hasBio = Array.isArray(person.bio) ? person.bio.length > 0 : Boolean(person.bio);
   // One standard write-up column on every page: exactly as wide as the portrait above it.
   const quoteClass = "wix-person-quote";
@@ -96,7 +100,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
 
   return (
     <div className="wix-person-wrap" data-sbx-page={PROJECT} {...editablePage(pageDocuments)}>
-      <Link href={up.href} className="wix-side-tab wix-person-side-tab" {...t("side-tab")}>{up.label}</Link>
+      <Link href={up.href} className="wix-side-tab wix-person-side-tab" {...w("side-tab", up.label, "Side tab")} />
       {/* edit mode: drop photos anywhere on the page (or press Add photos) to add them to this person's Memories */}
       {editing && <PhotoDrop target={{ kind: "person", id: person._id, name: person.title, first: firstName(person) }} />}
 
@@ -133,7 +137,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")} {...t("portrait")}>
                   <PersonPortrait image={person.portrait} name={person.title} width={person.children.length === 0 ? 243 : 160} height={person.children.length === 0 ? 327 : 215} priority />
                 </div>
-                <PersonFacts person={person} otherParent={otherParent} editing={editing} />
+                <PersonFacts person={person} otherParent={otherParent} editing={editing} design={design} />
                 {hasBio ? (
                   <div className={quoteClass} {...editableField(person._id, "bio")} {...t("write-up")}>
                     <RichText content={person.bio} className="wix-quote" />
@@ -147,20 +151,20 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             </div>
 
             <div className="wix-person-right" {...t("children")}>
-              <PersonChildren person={person} byId={graph.byId} assets={assets} />
+              <PersonChildren person={person} byId={graph.byId} assets={assets} design={design} />
             </div>
           </div>
 
           {memories.length > 0 && (
             <section className="wix-person-memories" aria-labelledby="wix-person-memories-h" {...t("memories")}>
-              <h2 id="wix-person-memories-h" className="wix-strong wix-person-memories-h" {...t("memories-heading")}>Memories:</h2>
+              <h2 id="wix-person-memories-h" className="wix-strong wix-person-memories-h" {...w("memories-heading", "Memories:")} />
               <PhotoSlider photos={memories} label={`Photos of ${person.title}`} piece={t("memories-strip")} />
             </section>
           )}
           {/* edit mode only: a page with no photos gets a box that opens this member's Extra Memories photos */}
           {memories.length === 0 && editing && (
             <section className="wix-person-memories" aria-label="Add photos">
-              <h2 className="wix-strong wix-person-memories-h">Memories:</h2>
+              <h2 className="wix-strong wix-person-memories-h" {...w("memories-heading", "Memories:")} />
               <div className="wix-add-photos" {...editableField(person._id, "gallery")}>
                 <span className="wix-add-photos-plus" aria-hidden>+</span>
                 <strong>Add photos</strong>
@@ -173,7 +177,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
           <div className="wix-person-navband">
             {personStories.length > 0 && (
               <section className="wix-person-stories" aria-labelledby="wix-person-stories-h" {...t("stories")}>
-                <h2 id="wix-person-stories-h" className="wix-strong" {...t("stories-heading")}>Stories:</h2>
+                <h2 id="wix-person-stories-h" className="wix-strong" {...w("stories-heading", "Stories:")} />
                 <ul {...t("stories-list")}>
                   {personStories.map((s) => (
                     <li key={s._id}><Link href={`/stories/${s.slug}`} className="wix-text-link">{s.title}</Link></li>
@@ -181,12 +185,12 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                 </ul>
               </section>
             )}
-            <PageNav className="wix-person-nav" layout={t("nav")} />
+            <PageNav className="wix-person-nav" layout={t("nav")} design={design ?? {}} />
           </div>
         </article>
 
         <div className="wix-person-footer" {...t("footer")}>
-          <FooterLabel text={settings.footerText} />
+          <FooterLabel text={settings.footerText} design={design ?? {}} />
         </div>
       </WixCanvas>
     </div>

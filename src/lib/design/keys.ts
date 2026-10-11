@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import type { Look } from "./model";
 
 /**
  * Marks a piece of a page for the Design tool: `const d = pd()` then `<h1 {...d("name")}>`.
@@ -11,6 +12,20 @@ export function pd(scope?: string) {
     "data-pd": scope ? `${scope}--${key}` : key,
     ...(label ? { "data-pd-label": label } : {}),
     ...(style ? { style } : {}),
+  });
+}
+
+/**
+ * A caption the Design tool can re-word, per page: `const w = pdWords(design?.items)` then `<dt {...w("label-born", "Born:")} />`.
+ * Gives the pd() marks, `data-pd-words` (the built-in words, for the editor's "Original words") and the
+ * children: this page's own wording when its design has one, else the built-in words.
+ */
+export function pdWords(items?: Record<string, Look>, scope?: string) {
+  const t = pd(scope);
+  return (key: string, text: string, label?: string) => ({
+    ...t(key, undefined, label),
+    "data-pd-words": text,
+    children: items?.[scope ? `${scope}--${key}` : key]?.words || text,
   });
 }
 

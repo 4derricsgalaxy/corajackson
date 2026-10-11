@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { clsx } from "clsx";
+import { pdWords } from "@/lib/design/keys";
+import type { Look } from "@/lib/design/model";
 
 /** Round gradient home icon used at the bottom of every original page. */
 export function HomeButton({ large, className, piece }: { large?: boolean; className?: string; piece?: object }) {
@@ -16,18 +18,17 @@ export function HomeButton({ large, className, piece }: { large?: boolean; class
 /** Blue "Family Tree" pill. */
 export function FamilyTreeButton({ className, piece }: { className?: string; piece?: object }) {
   return (
-    <Link href="/family-tree" className={clsx("wix-pill", className)} {...piece}>
-      Family Tree
-    </Link>
+    <Link href="/family-tree" className={clsx("wix-pill", className)} {...{ children: "Family Tree", ...piece }} />
   );
 }
 
 /** The home icon stacked over the Family Tree pill, centered — the footer nav of every inner page. */
-export function PageNav({ className, layout }: { className?: string; layout?: object }) {
+export function PageNav({ className, layout, design }: { className?: string; layout?: object; design?: Record<string, Look> }) {
   return (
     <nav aria-label="Page" className={clsx("flex flex-col items-center gap-[17px]", className)} {...layout}>
       <HomeButton piece={{ "data-pd": "btn-home" }} />
-      <FamilyTreeButton piece={{ "data-pd": "btn-tree" }} />
+      {/* with a page design passed in, the pill's words can be changed on that page */}
+      <FamilyTreeButton piece={design ? pdWords(design)("btn-tree", "Family Tree") : { "data-pd": "btn-tree" }} />
     </nav>
   );
 }
@@ -44,10 +45,11 @@ export function footerLabelText(text?: string) {
 }
 
 /** "Cora Mae Jackson Family" label at the bottom-left of the canvas. */
-export function FooterLabel({ text, layout }: { text?: string; layout?: object }) {
+export function FooterLabel({ text, layout, design }: { text?: string; layout?: object; design?: Record<string, Look> }) {
+  const label = footerLabelText(text);
   return (
     <p className="wix-footer-label" {...layout}>
-      {footerLabelText(text)}
+      {design ? <span {...pdWords(design)("footer-label", label, "Footer words")} /> : label}
       <span className="wix-footer-credit">
         Site by McMathematics · Powered by{" "}
         <a href="https://snackboxcms.com" target="_blank" rel="noopener">SnackBox</a>

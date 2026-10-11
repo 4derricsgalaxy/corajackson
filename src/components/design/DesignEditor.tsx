@@ -45,6 +45,18 @@ function pieceLabel(el: Element | null, key: string) {
   return PIECE_LABELS[base] ?? PIECE_LABELS[key] ?? base.replace(/-/g, " ");
 }
 
+/** put each re-wordable caption's words on the page: this design's wording, else the built-in words */
+function syncWords(d: Design) {
+  document.querySelectorAll<HTMLElement>("[data-pd-words][data-pd]").forEach((el) => {
+    const want = d.items[el.getAttribute("data-pd")!]?.words?.trim() || el.getAttribute("data-pd-words") || "";
+    const node = el.firstChild;
+    // change the text node React rendered in place (never swap nodes React owns)
+    if (node && node.nodeType === Node.TEXT_NODE && el.childNodes.length === 1) {
+      if (node.nodeValue !== want) node.nodeValue = want;
+    } else if (!el.childNodes.length) el.append(want);
+  });
+}
+
 /** a copy of the design with one piece's / added thing's look changed (undefined values = back to normal) */
 function withLook(d: Design, sel: Sel, patch: Partial<Added>): Design {
   if (sel?.kind === "piece") {
@@ -171,6 +183,23 @@ export function DesignEditor() {
     for (const [key, look] of Object.entries(s.design.items)) if (look.hidden) pieceEl(key)?.classList.add("pd-ghost");
     return () => document.querySelectorAll(".pd-ghost").forEach((el) => el.classList.remove("pd-ghost"));
   }, [active, s.design]);
+
+  // re-worded captions show their words as you type, and follow Undo / Redo / versions / default format
+  useEffect(() => {
+    if (s.path && s.path === window.location.pathname) syncWords(s.design);
+  }, [s.path, s.design]);
+
+  // a family member may change only their own page: ask once per page when the tool opens
+  const [access, setAccess] = useState<{ path: string; canEdit: boolean; own?: string } | null>(null);
+  useEffect(() => {
+    if (!active || !path || access?.path === path) return;
+    let live = true;
+    fetch(`/api/design/access?path=${encodeURIComponent(path)}`, { cache: "no-store" })
+      .then((r) => r.json() as Promise<{ canEdit?: boolean; own?: string }>)
+      .then((r) => { if (live) setAccess({ path, canEdit: r.canEdit !== false, own: r.own }); })
+      .catch(() => { if (live) setAccess({ path, canEdit: true }); });
+    return () => { live = false; };
+  }, [active, path, access?.path]);
 
   /* ---------- selection frame follows the selected thing (every frame: pages move while you work) ---------- */
   useEffect(() => {
@@ -395,6 +424,8 @@ export function DesignEditor() {
     const onDbl = (e: MouseEvent) => {
       shield(e);
       if (selRef.current?.kind === "added") document.querySelector<HTMLTextAreaElement>(".pd-ui textarea[data-pd-text]")?.focus();
+      // a caption: straight into its Words box, all selected, ready to type over
+      else window.requestAnimationFrame(() => document.querySelector<HTMLTextAreaElement>(".pd-ui textarea[data-pd-words-input]")?.select());
     };
 
     const onKey = (e: KeyboardEvent) => {
@@ -553,6 +584,18 @@ export function DesignEditor() {
     );
   }
 
+  if (access?.path === path && !access.canEdit) {
+    return (
+      <div className="pd-ui pd-bar">
+        <strong>Design</strong>
+        <span className="pd-msg">This is someone else&apos;s page. You can change only your own page.</span>
+        {access.own && <a className="pd-primary pd-link" href={access.own}>Go to my page</a>}
+        <span className="pd-grow" />
+        <button type="button" onClick={() => setActive(false)}>Done</button>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="pd-ui pd-bar" role="toolbar" aria-label="Design">
@@ -682,6 +725,8 @@ function ItemPanel({ sel, design, apply, commit, setSel, onReplace, onSnackbox }
   const img = el instanceof HTMLImageElement ? el : el?.querySelector("img");
   const cmsField = sel.kind === "piece" && el && (el.matches("[data-sbx-field]") || el.querySelector("[data-sbx-field]") || el.closest("[data-sbx-field]"));
   const hasText = Boolean(added?.kind === "text" || (sel.kind === "piece" && (el?.textContent ?? "").trim()));
+  // a caption (label, heading, button, child's name...) whose words can be changed on this page
+  const original = sel.kind === "piece" ? el?.getAttribute("data-pd-words") ?? null : null;
   const [, reread] = useState(0);
   useEffect(() => {
     // a thing added a moment ago is on the page only after the first render: read its look again
@@ -712,6 +757,26 @@ function ItemPanel({ sel, design, apply, commit, setSel, onReplace, onSnackbox }
           <button type="button" onClick={() => openCrop(img as HTMLImageElement)}>Crop photo</button>
         ) : null)}
       </div>
+
+      {original !== null && (
+        <details open className="pd-sec">
+          <summary>Words</summary>
+          <textarea
+            data-pd-words-input=""
+            rows={2}
+            maxLength={300}
+            value={look.words ?? original}
+            onFocus={() => designStore.checkpoint()}
+            onChange={(e) => apply({ words: e.target.value === original ? undefined : e.target.value }, "live")}
+            aria-label="Words"
+          />
+          <div className="pd-row pd-wrap">
+            {look.words !== undefined && <button type="button" onClick={() => apply({ words: undefined })} title={`Back to "${original}"`}>Original words</button>}
+            {!look.hidden && <button type="button" onClick={() => apply({ hidden: true })} title="Take these words off this page (Bring back undoes it)">Delete words</button>}
+          </div>
+          <p className="pd-hint">Changes the words on this page only. Press Save when done.</p>
+        </details>
+      )}
 
       {added?.kind === "text" && (
         <details open className="pd-sec">

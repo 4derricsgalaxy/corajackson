@@ -1,11 +1,13 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor, type EditorWrite } from "@/lib/cms/editor-auth";
+import { mayChange, pageAccess } from "@/lib/cms/page-access";
 import { cacheTags } from "@/lib/cms/sdk";
 import { cleanDesign, designDocId, isEmptyDesign, parseDesign, PATH_RE, type Design } from "@/lib/design/model";
 import { DESIGN_TYPE } from "@/lib/design/server";
 
-// The Design tool's save endpoint. Only a signed-in editor (requireEditor) can use it.
+// The Design tool's save endpoint. Only a signed-in editor (requireEditor) can use it, and a Family member
+// only for their own page (pageAccess); owners and team members for every page.
 //   GET  ?path=/family/carlos        -> { design, history: [{ at, design }] }  (earlier saved versions)
 //   POST { path, design }             -> saves that page's design (design: null = back to the default format)
 //   POST { copyTo: [paths], design }  -> gives each of those pages this design
@@ -14,6 +16,19 @@ import { DESIGN_TYPE } from "@/lib/design/server";
 const KEEP = 10;
 type Version = { at: string; data: string };
 type Doc = { result?: { data?: string; history?: string } };
+
+/** null when this editor may change every one of these pages, else the refusal to send */
+async function refuse(editor: EditorWrite, paths: string[]) {
+  try {
+    const access = await pageAccess(editor.email);
+    if (paths.every((p) => mayChange(access, p))) return null;
+    const own = access.all ? [] : access.pages;
+    const msg = own.length ? `You can change only your own page (${own.join(", ")}).` : "Your Snackbox sign-in is not linked to a page on this site yet. Ask the site owner to link it.";
+    return NextResponse.json({ error: msg }, { status: 403 });
+  } catch (err) {
+    return NextResponse.json({ error: `Could not check which page is yours: ${(err as Error).message} Try again in a moment.` }, { status: 502 });
+  }
+}
 
 async function readDoc(editor: EditorWrite, id: string) {
   const res = await fetch(`${editor.api}/doc/${encodeURIComponent(id)}`, { headers: editor.auth, cache: "no-store" });
@@ -37,6 +52,8 @@ export async function GET(req: NextRequest) {
   if (editor instanceof NextResponse) return editor;
   const path = req.nextUrl.searchParams.get("path") ?? "";
   if (!PATH_RE.test(path)) return NextResponse.json({ error: "Bad page address." }, { status: 400 });
+  const no = await refuse(editor, [path]);
+  if (no) return no;
   try {
     const doc = await readDoc(editor, designDocId(path));
     const history = parseHistory(doc?.history).map((v) => ({ at: v.at, design: parseDesign(v.data) ?? null }));
@@ -55,6 +72,8 @@ export async function POST(req: NextRequest) {
   if (!paths.length || paths.length > 150 || !paths.every((p): p is string => typeof p === "string" && PATH_RE.test(p))) {
     return NextResponse.json({ error: "Bad page address." }, { status: 400 });
   }
+  const no = await refuse(editor, [...new Set(paths)]);
+  if (no) return no;
   const design: Design | null = body?.design === null ? null : cleanDesign(body?.design);
   const baseData = design && !isEmptyDesign(design) ? JSON.stringify(design) : "";
 

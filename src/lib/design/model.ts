@@ -40,6 +40,8 @@ export interface Look {
   z?: number;
   /** deleted / cut from this page (kept so it can be brought back) */
   hidden?: boolean;
+  /** a caption's own wording on this page, replacing the built-in words (pieces marked data-pd-words) */
+  words?: string;
 }
 
 export type AddedKind = "text" | "image" | "box" | "html";
@@ -119,6 +121,7 @@ const COLOR_RE = /^#[0-9a-f]{6}$/;
 const MAX_ADDED = 200;
 const MAX_ITEMS = 600;
 const MAX_TEXT = 5000;
+const MAX_WORDS = 300;
 const MAX_HTML = 60_000;
 
 const num = (v: unknown, lo: number, hi: number) =>
@@ -149,6 +152,7 @@ function cleanLook(input: unknown, added = false): Look {
   set("borderW", num(r.borderW, 0, 60));
   set("borderC", color(r.borderC));
   set("z", num(r.z, -50, 500));
+  if (!added && typeof r.words === "string" && r.words.trim()) out.words = r.words.trim().slice(0, MAX_WORDS);
   return out;
 }
 
