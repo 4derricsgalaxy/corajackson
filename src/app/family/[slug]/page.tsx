@@ -25,8 +25,6 @@ import { getDesign } from "@/lib/design/server";
 
 export const revalidate = 3600;
 
-/** Pages that keep the original autumn-leaves artwork when they have no Page background of their own. */
-const LEAVES_PAGES = new Set(["joanne"]);
 export const dynamicParams = true;
 
 export async function generateStaticParams() {
@@ -107,9 +105,8 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
       <WixCanvas path={`/family/${person.slug}`} minHeight={560} className="wix-person">
         {/* no children: the standard "solo" page modeled on Emrick's (big portrait toward the middle, no Children column) */}
         <article className={clsx("wix-person-body", person.children.length === 0 && "wix-person-solo")}>
-          {/* page art: the member's own Page background if the CMS has one; else the autumn leaves on Joanne's page only
-              (the page the template was modeled on), else none. In edit mode an empty page still gets an invisible
-              full-page target, so clicking the background opens the Page background field to add one. */}
+          {/* page art: the member's own Page background if the CMS has one, else none. In edit mode an empty page still
+              gets an invisible full-page target, so clicking the background opens the Page background field to add one. */}
           {person.heroImage ? (
             // eslint-disable-next-line @next/next/no-img-element -- CMS page art, straight from the media CDN
             <img
@@ -123,9 +120,6 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
               {...editableField(person._id, "heroImage")}
               {...t("art")}
             />
-          ) : LEAVES_PAGES.has(person.slug) ? (
-            // eslint-disable-next-line @next/next/no-img-element -- static decorative artwork
-            <img src="/wix/leaves.png" alt="" aria-hidden className="wix-canvas-art wix-person-art" style={artStyle} {...editableField(person._id, "heroImage")} {...t("art")} />
           ) : editing ? (
             <div aria-hidden className="wix-canvas-art wix-person-art wix-person-art-empty" {...editableField(person._id, "heroImage")} />
           ) : null}

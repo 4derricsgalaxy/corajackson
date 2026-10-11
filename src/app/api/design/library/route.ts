@@ -12,16 +12,16 @@ export async function GET() {
   const [graph, photos, stories] = await Promise.all([getFamilyGraph(), getPhotos(), getStories()]);
 
   // t = title, p = people tagged in it (from the Photos entry's "People pictured"; a portrait is its person)
-  type Pic = { t: string; p: string[]; u: string; s?: string; w?: number | null; h?: number | null };
+  type Pic = { t: string; p: string[]; u: string; s?: string; w?: number | null; h?: number | null; a?: string };
   const byUrl = new Map<string, Pic>();
-  const add = (t: string, people: string[], img?: { url?: string; srcset?: string; width?: number | null; height?: number | null } | null) => {
+  const add = (t: string, people: string[], img?: { url?: string; srcset?: string; width?: number | null; height?: number | null; assetId?: string } | null) => {
     if (!img?.url) return;
     const had = byUrl.get(img.url);
     if (had) {
       had.p = [...new Set([...had.p, ...people])];
       return;
     }
-    byUrl.set(img.url, { t, p: people, u: img.url, s: img.srcset, w: img.width, h: img.height });
+    byUrl.set(img.url, { t, p: people, u: img.url, s: img.srcset, w: img.width, h: img.height, a: img.assetId });
   };
   const nameOf = (id: string) => {
     const m = graph.byId.get(id);

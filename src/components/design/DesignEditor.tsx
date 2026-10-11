@@ -2,6 +2,7 @@
 
 import { HeicDecodeError, PHOTO_ACCEPT, preparePhoto } from "@/lib/photos/prepare";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cleanDesign, emptyDesign, FONTS, isEmptyDesign, newId, type Added, type Design, type Look } from "@/lib/design/model";
 import { PIECE_LABELS } from "@/lib/design/keys";
 import { canCrop, openCrop } from "./CropDialog";
@@ -22,9 +23,9 @@ import { designStore, isDirty, useDesignState } from "./store";
  */
 
 type Sel = { kind: "piece"; key: string } | { kind: "added"; id: string } | { kind: "page" } | null;
-type Picked = { src: string; srcset?: string; w?: number | null; h?: number | null; alt?: string };
-type Library = { pictures: { t: string; p: string[]; u: string; s?: string; w?: number | null; h?: number | null }[]; pages: { path: string; title: string; group: string }[] };
-type Modal = null | { kind: "picture"; purpose: "add" | "replace" | "page" } | { kind: "copy" } | { kind: "versions" };
+type Picked = { src: string; srcset?: string; w?: number | null; h?: number | null; alt?: string; /** Snackbox asset, when known */ asset?: string };
+type Library = { pictures: { t: string; p: string[]; u: string; s?: string; w?: number | null; h?: number | null; a?: string }[]; pages: { path: string; title: string; group: string }[] };
+type Modal = null | { kind: "picture"; purpose: "add" | "replace" | "page" | "person-bg" } | { kind: "copy" } | { kind: "versions" };
 
 const CLIP_KEY = "cj-design-clipboard";
 const FILLS = ["#ffffff", "#000000", "#292f33", "#727272", "#b5b5b5", "#566fb8", "#9db8b2", "#7a1f1f", "#d97706", "#f5e6c8", "#2f6fed", "#1f7a3a"];
@@ -118,9 +119,9 @@ async function upload(file: File): Promise<Picked> {
   form.set("file", blob, name);
   form.set("alt", file.name.replace(/\.\w+$/, ""));
   const res = await fetch("/api/design/upload", { method: "POST", body: form });
-  const out = (await res.json().catch(() => ({}))) as { url?: string; srcset?: string; width?: number | null; height?: number | null; error?: string };
+  const out = (await res.json().catch(() => ({}))) as { id?: string; url?: string; srcset?: string; width?: number | null; height?: number | null; error?: string };
   if (!res.ok || !out.url) throw new Error(out.error ?? `Upload failed (${res.status})`);
-  return { src: out.url, srcset: out.srcset, w: out.width ?? w, h: out.height ?? h, alt: file.name.replace(/\.\w+$/, "") };
+  return { src: out.url, srcset: out.srcset, w: out.width ?? w, h: out.height ?? h, alt: file.name.replace(/\.\w+$/, ""), asset: out.id };
 }
 
 export function DesignEditor() {
@@ -130,6 +131,8 @@ export function DesignEditor() {
   const [status, setStatus] = useState<{ kind: "idle" | "busy" | "ok" | "error"; text?: string }>({ kind: "idle" });
   const [modal, setModal] = useState<Modal>(null);
   const [panelLeft, setPanelLeft] = useState(false);
+  const router = useRouter();
+  const [bgPrevious, setBgPrevious] = useState<string | null>(null);
   const [narrow, setNarrow] = useState(false);
   const [, force] = useState(0);
   const overlay = useRef<HTMLDivElement>(null);
@@ -526,7 +529,23 @@ export function DesignEditor() {
     if (m?.kind !== "picture") return;
     if (m.purpose === "add") addPicture(p);
     else if (m.purpose === "replace") apply({ src: p.src, srcset: p.srcset, alt: p.alt, iw: p.w ?? undefined, ih: p.h ?? undefined, crop: undefined });
+    else if (m.purpose === "person-bg") void personBackground({ set: { asset: p.asset, src: p.src } });
     else commit({ ...designStore.get().design, page: { ...designStore.get().design.page, image: p.src } });
+  };
+
+  // a person's page background lives on their Snackbox entry: changed right away, then the page re-reads it
+  const personBackground = async (change: BgChange) => {
+    setStatus({ kind: "busy", text: "Changing the background…" });
+    try {
+      const res = await fetch("/api/design/background", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, ...change }) });
+      const out = (await res.json().catch(() => ({}))) as { error?: string; previous?: string };
+      if (!res.ok) throw new Error(out.error ?? `Could not change the background (${res.status})`);
+      if (change.remove || change.set) setBgPrevious(out.previous ?? null);
+      setStatus({ kind: "ok", text: change.remove ? "Background removed. Visitors see it now." : "Background saved. Visitors see it now." });
+      router.refresh();
+    } catch (err) {
+      setStatus({ kind: "error", text: (err as Error).message });
+    }
   };
 
   /* ---------- save / reset / done ---------- */
@@ -632,7 +651,7 @@ export function DesignEditor() {
           <button type="button" className="pd-mini" onClick={() => setPanelLeft((v) => !v)} title="Move this panel to the other side">⇆</button>
         </div>
         {sel?.kind === "page" || !sel ? (
-          <PagePanel personPage={/^\/family\/[^/]+$/.test(path ?? "")} design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); setSel({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
+          <PagePanel personPage={/^\/family\/[^/]+$/.test(path ?? "")} design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onPersonPicture={() => setModal({ kind: "picture", purpose: "person-bg" })} onPersonBackground={personBackground} bgPrevious={bgPrevious} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); setSel({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
         ) : (
           <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} design={s.design} apply={apply} commit={commit} setSel={setSel} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} />
         )}
@@ -867,8 +886,12 @@ function ItemPanel({ sel, design, apply, commit, setSel, onReplace, onSnackbox }
   );
 }
 
-function PagePanel({ personPage, design, commit, onPicture, onCopy, onVersions, onDefault, onShow, selected }: {
+function PagePanel({ personPage, design, commit, onPicture, onPersonPicture, onPersonBackground, bgPrevious, onCopy, onVersions, onDefault, onShow, selected }: {
   personPage: boolean; design: Design; commit: (d: Design) => void; onPicture: () => void; onCopy: () => void; onVersions: () => void; onDefault: () => void; onShow: (key: string) => void; selected: boolean;
+  onPersonPicture: () => void;
+  onPersonBackground: (change: BgChange) => void;
+  /** the person's background before the last change/removal, so it can be put back */
+  bgPrevious: string | null;
 }) {
   const page = design.page;
   const setPage = (patch: Partial<Design["page"]>, live = false) => {
@@ -891,15 +914,24 @@ function PagePanel({ personPage, design, commit, onPicture, onCopy, onVersions, 
         {/* a person's page has ONE background, kept on their Snackbox entry (Page background + Background strength),
             so editors never end up with two pictures where the Snackbox one seems to "not work" */}
         {personPage ? (
-          <p className="pd-hint">
-            This person&apos;s background picture is set in Snackbox: open their entry and change <strong>Page background</strong> and <strong>Background strength (%)</strong>.
-            {page.image && <> <button type="button" onClick={() => setPage({ image: undefined, imageFit: undefined, imageOpacity: undefined })}>Remove the old Design background</button></>}
-          </p>
+          <PersonBackground onPicture={onPersonPicture} onChange={onPersonBackground} previous={bgPrevious}>
+            {page.image && <button type="button" onClick={() => setPage({ image: undefined, imageFit: undefined, imageOpacity: undefined })}>Remove the old Design background</button>}
+          </PersonBackground>
         ) : (
-          <div className="pd-row pd-wrap">
-            <button type="button" onClick={onPicture}>{page.image ? "Change background picture" : "Background picture…"}</button>
-            {page.image && <button type="button" onClick={() => setPage({ image: undefined, imageFit: undefined, imageOpacity: undefined })}>Remove</button>}
-          </div>
+          <>
+            <div className="pd-row pd-wrap">
+              <button type="button" onClick={onPicture}>{page.image ? "Change background picture" : "Background picture…"}</button>
+              {page.image && <button type="button" onClick={() => setPage({ image: undefined, imageFit: undefined, imageOpacity: undefined })}>Remove</button>}
+            </div>
+            {(page.noArt || hasBuiltInBackground()) && (
+              <div className="pd-row pd-wrap">
+                <span className="pd-lab pd-grow">Built-in background</span>
+                {page.noArt
+                  ? <button type="button" onClick={() => setPage({ noArt: undefined })}>Bring it back</button>
+                  : <button type="button" onClick={() => setPage({ noArt: true })}>Remove it</button>}
+              </div>
+            )}
+          </>
         )}
         {page.image && !personPage && (
           <>
@@ -939,6 +971,69 @@ function PagePanel({ personPage, design, commit, onPicture, onCopy, onVersions, 
         </div>
       </details>
     </div>
+  );
+}
+
+type BgChange = { set?: { asset?: string; src?: string }; remove?: true; strength?: number | null };
+
+/** does the page draw a background of its own (Family Tree picture, Meet the Family leaves, page artwork)? */
+function hasBuiltInBackground() {
+  const canvas = canvasEl();
+  if (!canvas) return false;
+  if (canvas.querySelector(".wix-canvas-art:not(.wix-person-art)")) return true;
+  return [canvas, canvas.querySelector(".wix-tree-inner")].some((el) => el && getComputedStyle(el).backgroundImage.includes("url("));
+}
+
+const personArt = () => document.querySelector<HTMLImageElement>(".wix-person-art-hero, img.wix-person-art");
+
+/** A person's page background: the picture and strength on their Snackbox entry, changed right away. */
+function PersonBackground(props: { onPicture: () => void; onChange: (change: BgChange) => void; previous: string | null; children?: React.ReactNode }) {
+  // the page re-reads the entry after each change: follow the picture it then shows
+  const [src, setSrc] = useState<string | null>(() => personArt()?.getAttribute("src") ?? null);
+  useEffect(() => {
+    const canvas = canvasEl();
+    if (!canvas) return;
+    const watch = new MutationObserver(() => setSrc(personArt()?.getAttribute("src") ?? null));
+    watch.observe(canvas, { subtree: true, childList: true, attributes: true, attributeFilter: ["src", "style"] });
+    return () => watch.disconnect();
+  }, []);
+  return <PersonBackgroundControls key={src ?? "none"} {...props} />;
+}
+
+function PersonBackgroundControls({ onPicture, onChange, previous, children }: {
+  onPicture: () => void;
+  onChange: (change: BgChange) => void;
+  previous: string | null;
+  children?: React.ReactNode;
+}) {
+  const art = personArt();
+  const saved = art ? Math.round(parseFloat(getComputedStyle(art).getPropertyValue("--wix-art-opacity") || "0.45") * 100) : 45;
+  const [strength, setStrength] = useState(saved);
+  // live preview while dragging; saved once, shortly after the slider stops moving
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const preview = (v: number) => {
+    setStrength(v);
+    art?.style.setProperty("--wix-art-opacity", String(v / 100));
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => onChange({ strength: v }), 700);
+  };
+  return (
+    <>
+      <div className="pd-row pd-wrap">
+        <button type="button" onClick={onPicture}>{art ? "Change background picture" : "Background picture…"}</button>
+        {art && <button type="button" onClick={() => onChange({ remove: true })}>Remove</button>}
+        {previous && <button type="button" onClick={() => onChange({ set: { asset: previous } })} title="Put back the background that was there before your last change">Put the old one back</button>}
+        {children}
+      </div>
+      {art && (
+        <label className="pd-range">
+          <span>Strength</span>
+          <input type="range" min={0} max={100} value={strength} onChange={(e) => preview(Number(e.target.value))} />
+        </label>
+      )}
+      <p className="pd-hint">Background changes on a person&apos;s page save right away (no Save needed).</p>
+    </>
   );
 }
 
@@ -1034,7 +1129,7 @@ function PicturePicker({ onPick, onClose }: { onPick: (p: Picked) => void; onClo
           {!lib && !err && <p className="pd-hint">Loading pictures…</p>}
           <div className="pd-grid">
             {matches.map((p) => (
-              <button key={p.u} type="button" className="pd-thumb" title={p.p.length ? `${p.t}\nTagged: ${p.p.join(", ")}` : `${p.t}\nNo one tagged`} onClick={() => onPick({ src: p.u, srcset: p.s, w: p.w, h: p.h, alt: p.t })}>
+              <button key={p.u} type="button" className="pd-thumb" title={p.p.length ? `${p.t}\nTagged: ${p.p.join(", ")}` : `${p.t}\nNo one tagged`} onClick={() => onPick({ src: p.u, srcset: p.s, w: p.w, h: p.h, alt: p.t, asset: p.a })}>
                 {/* eslint-disable-next-line @next/next/no-img-element -- CMS thumbnail */}
                 <img src={p.u} alt="" loading="lazy" />
                 <span>{p.t}</span>

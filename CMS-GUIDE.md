@@ -79,6 +79,10 @@ On any page opened for editing from Snackbox, a **Design** button sits in the bo
 
 The facts themselves (dates, places, work), the name and the write-up are the person's Snackbox entry: click them outside Design mode (or **Edit in Snackbox** in the Design panel). Empty Born / Place / Life & Work show as "Click to add" only while editing.
 
+**Backgrounds (every page):** press **Design**, then **Page** (or click empty space).
+- On a person's page: **Change background picture** (from the family's pictures or your computer), **Remove**, **Put the old one back**, and the **Strength** slider. These save right away — no Save needed — and are stored on the person's Snackbox entry (Page background / Background strength).
+- On other pages: **Background picture…** / **Change** / **Remove**, fit and strength, plus **Built-in background → Remove it / Bring it back** for the page's own artwork (Family Tree picture, Meet the Family leaves). Press **Save**.
+
 The Design tool also moves, resizes, restyles (font, size, bold, color, fill, border), cuts / copies / pastes pieces between pages, adds text boxes and pictures, and sets the page background. Moves and sizes apply on computer-width screens; phones re-flow the page. **Page → Versions** brings back an earlier save.
 
 ## Add a new family member

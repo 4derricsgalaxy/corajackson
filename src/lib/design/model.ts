@@ -78,6 +78,8 @@ export interface PageLook {
   /** 0-100 */
   imageOpacity?: number;
   surround?: string;
+  /** the page's built-in background (Family Tree picture, Meet the Family leaves, page artwork) removed */
+  noArt?: boolean;
 }
 
 export interface Design {
@@ -225,6 +227,7 @@ export function cleanDesign(input: unknown): Design {
   if (io !== undefined) d.page.imageOpacity = io;
   const sc = color(p.surround);
   if (sc) d.page.surround = sc;
+  if (p.noArt === true) d.page.noArt = true;
   return d;
 }
 
@@ -303,6 +306,10 @@ export function designCss(design: Design): string {
   const p = design.page;
   if (p.color) out.push(`.wix-canvas{background:${p.color} !important}`);
   if (p.surround) out.push(`html,body{background:${p.surround} !important}`);
+  // built-in backgrounds drawn by the page's own CSS (a person's page keeps its background on their entry instead)
+  if (p.noArt) out.push(".wix-tree-inner,.wix-famidx-canvas{background-image:none !important}", ".wix-canvas-art:not(.wix-person-art){display:none !important}");
+  if (p.image) out.push(".wix-tree-inner,.wix-famidx-canvas{background:transparent !important}");
+  if (p.color) out.push(`.wix-tree-inner{background-color:${p.color} !important}`);
   return out.join("\n");
 }
 
