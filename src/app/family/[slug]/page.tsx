@@ -133,7 +133,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")} {...t("portrait")}>
                   <PersonPortrait image={person.portrait} name={person.title} width={person.children.length === 0 ? 243 : 160} height={person.children.length === 0 ? 327 : 215} priority />
                 </div>
-                <PersonFacts person={person} otherParent={otherParent} />
+                <PersonFacts person={person} otherParent={otherParent} editing={editing} />
                 {hasBio ? (
                   <div className={quoteClass} {...editableField(person._id, "bio")} {...t("write-up")}>
                     <RichText content={person.bio} className="wix-quote" />
