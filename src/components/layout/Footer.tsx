@@ -30,7 +30,7 @@ export function Footer({ nav, footerText }: { nav: NavData; footerText?: string 
       </div>
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 pb-8 text-xs text-ink-3 md:px-8">
         <span>© {new Date().getFullYear()} The Jackson Family</span>
-        <span className="font-mono">Content managed in Wix CMS</span>
+        <span>Site by McMathematics · Powered by <a href="https://snackboxcms.com" target="_blank" rel="noopener" className="link-underline">SnackBox</a></span>
       </div>
     </footer>
   );
