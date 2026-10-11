@@ -3,10 +3,9 @@
 Next.js 16 site for the Cora Mae Jackson family, with **Snackbox CMS** as the system of record.
 Repo: https://github.com/MistaSnacks/corajackson · Production: https://corajackson.vercel.app
 
-## Branches
+## Branch
 
-- `main` — the redesigned "heirloom" UI with the WebGL family tree.
-- `wix-classic` — the same Snackbox content and schema, with the UI rebuilt to match the original Wix site (https://tony-mcmath.wixsite.com/corajackson): 980px white canvas on a gray surround, tree-art home page, photo-frame family tree, and ONE person-page template for every family member, modeled on the original Joanne Jackson page. See `WIX-CLASSIC-SPEC.md`.
+`main` is the only branch and is what runs on the live site: the UI rebuilt to match the original Wix site (https://tony-mcmath.wixsite.com/corajackson) — 980px white canvas on a gray surround, tree-art home page, photo-frame family tree, and ONE person-page template for every family member, modeled on the original Joanne Jackson page. See `WIX-CLASSIC-SPEC.md`. (The earlier "heirloom" design with the WebGL tree is only in git history, before merge 254a447.)
 
 ## How it works
 

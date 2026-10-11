@@ -1,6 +1,6 @@
 # Wix Classic branch — shared build spec
 
-Branch `wix-classic` rebuilds the UI to match the ORIGINAL Wix site
+This design (originally built on the `wix-classic` branch, now merged into `main`) rebuilds the UI to match the ORIGINAL Wix site
 (https://tony-mcmath.wixsite.com/corajackson) as exactly as practical, while keeping the
 Snackbox CMS schema and the data layer (`src/lib/content/*`, `src/lib/cms/*`) UNCHANGED.
 
