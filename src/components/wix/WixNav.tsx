@@ -45,5 +45,13 @@ export function footerLabelText(text?: string) {
 
 /** "Cora Mae Jackson Family" label at the bottom-left of the canvas. */
 export function FooterLabel({ text, layout }: { text?: string; layout?: object }) {
-  return <p className="wix-footer-label" {...layout}>{footerLabelText(text)}</p>;
+  return (
+    <p className="wix-footer-label" {...layout}>
+      {footerLabelText(text)}
+      <span className="wix-footer-credit">
+        Site by McMathematics · Powered by{" "}
+        <a href="https://snackboxcms.com" target="_blank" rel="noopener">SnackBox</a>
+      </span>
+    </p>
+  );
 }

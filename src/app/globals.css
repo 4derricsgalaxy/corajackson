@@ -198,6 +198,13 @@ body {
   padding: 0 19px 0;
   margin: 0;
 }
+.wix-footer-credit {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+}
+.wix-footer-credit a { color: inherit; text-decoration: underline; }
 
 /* Small floating "Home" tab that sits in the gray surround on person pages */
 .wix-side-tab {
