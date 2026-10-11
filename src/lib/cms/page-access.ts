@@ -1,10 +1,15 @@
-// Which pages a signed-in editor may change with the on-page tools (Design tool).
-// Snackbox owners and team members: every page. A "Family member": only their own /family/<slug> page,
-// found by the email their invite was linked to (the member entry's private `email` field).
+import { getFamilyGraph } from "@/lib/content/queries";
+
+// Which pages a signed-in editor may change with the on-page tools (Design, Crop, Add photos).
+// Snackbox owners and team members: every page. A "Family member": their own /family/<slug> page and their
+// children's pages. Their own entry is found by the email their invite was linked to (the member entry's
+// private `email` field); their children are the entries whose Parent is them. (The Snackbox "Family member"
+// role grants the same: own entry + entries whose `parent` is them.)
 // The public read API never returns that field, so this asks Snackbox's admin (MCP) endpoint with the
 // site's write token. Answers are kept for a few minutes per email.
 
-type Access = { all: true } | { all: false; pages: string[] };
+/** pages: page addresses; ids: the Family Members entries behind them (own first) */
+export type Access = { all: true } | { all: false; pages: string[]; ids: string[] };
 
 const TTL = 5 * 60_000;
 const cache = new Map<string, { at: number; access: Access }>();
@@ -36,7 +41,7 @@ async function mcp<T>(tool: string, args: Record<string, unknown>): Promise<T> {
 
 /** What this editor may change. Throws when Snackbox can't be asked (callers then refuse the change). */
 export async function pageAccess(email: string | undefined): Promise<Access> {
-  if (!email) return { all: false, pages: [] };
+  if (!email) return { all: false, pages: [], ids: [] };
   const hit = cache.get(email);
   if (hit && Date.now() - hit.at < TTL) return hit.access;
 
@@ -46,12 +51,25 @@ export async function pageAccess(email: string | undefined): Promise<Access> {
   if (role && FULL_ROLES.has(role)) access = { all: true };
   else {
     const filter = { type: "familyMember", filters: [{ op: "eq", path: "email", value: email }], limit: 10 };
-    const found = await mcp<{ items?: { slug?: string; email?: string }[] }>("query", { fluent: JSON.stringify(filter) });
-    const pages = (found.items ?? []).filter((m) => m.slug && m.email?.toLowerCase() === email).map((m) => `/family/${m.slug}`);
-    access = { all: false, pages };
+    const found = await mcp<{ items?: { _id?: string; slug?: string; email?: string }[] }>("query", { fluent: JSON.stringify(filter) });
+    const own = (found.items ?? []).filter((m) => m._id && m.slug && m.email?.toLowerCase() === email);
+    const graph = await getFamilyGraph();
+    const people = own.flatMap((m) => [{ _id: m._id!, slug: m.slug! }, ...(graph.byId.get(m._id!)?.children ?? []).map((c) => ({ _id: c._id, slug: c.slug }))]);
+    const ids = [...new Set(people.map((p) => p._id))];
+    access = { all: false, ids, pages: [...new Set(people.map((p) => `/family/${p.slug}`))] };
   }
   cache.set(email, { at: Date.now(), access });
   return access;
 }
 
 export const mayChange = (access: Access, path: string) => access.all || access.pages.includes(path);
+/** may change things that belong to this Family Members entry (its page, photos tagged with it, its album) */
+export const mayChangeFor = (access: Access, memberId: string) => access.all || access.ids.includes(memberId);
+
+/** the refusal a family member gets for someone else's page */
+export function notYours(access: Access) {
+  if (access.all) return "";
+  return access.pages.length
+    ? `You can change only your own page and your children's pages (${access.pages.join(", ")}).`
+    : "Your Snackbox sign-in is not linked to a page on this site yet. Ask the site owner to link it.";
+}

@@ -1,13 +1,13 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor, type EditorWrite } from "@/lib/cms/editor-auth";
-import { mayChange, pageAccess } from "@/lib/cms/page-access";
+import { mayChange, notYours, pageAccess } from "@/lib/cms/page-access";
 import { cacheTags } from "@/lib/cms/sdk";
 import { cleanDesign, designDocId, isEmptyDesign, parseDesign, PATH_RE, type Design } from "@/lib/design/model";
 import { DESIGN_TYPE } from "@/lib/design/server";
 
 // The Design tool's save endpoint. Only a signed-in editor (requireEditor) can use it, and a Family member
-// only for their own page (pageAccess); owners and team members for every page.
+// only for their own and their children's pages (pageAccess); owners and team members for every page.
 //   GET  ?path=/family/carlos        -> { design, history: [{ at, design }] }  (earlier saved versions)
 //   POST { path, design }             -> saves that page's design (design: null = back to the default format)
 //   POST { copyTo: [paths], design }  -> gives each of those pages this design
@@ -22,9 +22,7 @@ async function refuse(editor: EditorWrite, paths: string[]) {
   try {
     const access = await pageAccess(editor.email);
     if (paths.every((p) => mayChange(access, p))) return null;
-    const own = access.all ? [] : access.pages;
-    const msg = own.length ? `You can change only your own page (${own.join(", ")}).` : "Your Snackbox sign-in is not linked to a page on this site yet. Ask the site owner to link it.";
-    return NextResponse.json({ error: msg }, { status: 403 });
+    return NextResponse.json({ error: notYours(access) }, { status: 403 });
   } catch (err) {
     return NextResponse.json({ error: `Could not check which page is yours: ${(err as Error).message} Try again in a moment.` }, { status: 502 });
   }

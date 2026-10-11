@@ -588,7 +588,7 @@ export function DesignEditor() {
     return (
       <div className="pd-ui pd-bar">
         <strong>Design</strong>
-        <span className="pd-msg">This is someone else&apos;s page. You can change only your own page.</span>
+        <span className="pd-msg">This is someone else&apos;s page. You can change only your own page and your children&apos;s pages.</span>
         {access.own && <a className="pd-primary pd-link" href={access.own}>Go to my page</a>}
         <span className="pd-grow" />
         <button type="button" onClick={() => setActive(false)}>Done</button>

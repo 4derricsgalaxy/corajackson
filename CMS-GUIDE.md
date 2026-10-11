@@ -69,7 +69,7 @@ The shortcut only works in a browser that has been used to edit the site at leas
 
 On any page opened for editing from Snackbox, a **Design** button sits in the bottom-right corner.
 
-**Who can change what:** each family member invited to Snackbox can design **their own page only** (the page their invite email is linked to). Owners and team members can design every page. On someone else's page the Design bar says so and offers **Go to my page**.
+**Who can change what:** each family member invited to Snackbox can change **their own page and their children's pages** (their own page is the one their invite email is linked to; their children are the entries whose Parent is them). That covers the Design tool, Crop, Add photos and clicking the name, facts, write-up and pictures to edit them in Snackbox. Owners and team members can change every page. On anyone else's page the Design bar says so and offers **Go to my page**.
 
 **Change, replace or delete words** (labels like "Born:", "Place:", "Life & Work:", "Mother:", "Marital Status:", the Children / Memories / Stories headings, each child's name, "No Children", the side tab, the Family Tree button and the footer words):
 

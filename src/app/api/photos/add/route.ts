@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
+import { mayChangeFor, notYours, pageAccess } from "@/lib/cms/page-access";
 import { cacheTags } from "@/lib/cms/sdk";
 
 // "Add photos" (drag-and-drop or the button) on a person's page or a Gallery album: one picture becomes one
@@ -35,6 +36,14 @@ export async function POST(req: NextRequest) {
   if (!(file instanceof File) || !file.size) return NextResponse.json({ error: "No picture was received." }, { status: 400 });
   if (!ID_RE.test(targetId)) return NextResponse.json({ error: "This page can't take photos." }, { status: 400 });
   if (file.size > MAX_BYTES) return NextResponse.json({ error: "That picture is too big (over 4 MB)." }, { status: 413 });
+
+  // a family member adds photos to their own / their children's pages (or those family lines' albums)
+  try {
+    const access = await pageAccess(editor.email);
+    if (!mayChangeFor(access, targetId)) return NextResponse.json({ error: notYours(access) }, { status: 403 });
+  } catch (err) {
+    return NextResponse.json({ error: `Could not check which page is yours: ${(err as Error).message}` }, { status: 502 });
+  }
 
   // the person (or the family line's head) must be a real Family Members entry
   const target = await fetch(`${api}/doc/${encodeURIComponent(targetId)}`, { headers: auth, cache: "no-store" })

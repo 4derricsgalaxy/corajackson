@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
+import { mayChangeFor, notYours, pageAccess } from "@/lib/cms/page-access";
 import { cleanCrop, CROP_FIELDS } from "@/lib/content/crop";
 const DOC_RE = /^[A-Za-z0-9_.:-]{1,80}$/;
 
@@ -24,6 +25,16 @@ export async function POST(req: NextRequest) {
   const doc = await fetch(`${api}/doc/${encodeURIComponent(docId)}`, { headers: auth, cache: "no-store" })
     .then((r) => (r.ok ? (r.json() as Promise<{ result?: Record<string, unknown> }>) : null))
     .catch(() => null);
+  // a family member: pictures on their own / their children's entries, or photos tagged with one of them
+  try {
+    const access = await pageAccess(editor.email);
+    const tagged = Array.isArray(doc?.result?.people) ? (doc.result.people as { _ref?: string }[]).map((p) => p?._ref ?? "") : [];
+    if (!access.all && !mayChangeFor(access, docId) && !tagged.some((id) => mayChangeFor(access, id))) {
+      return NextResponse.json({ error: notYours(access) }, { status: 403 });
+    }
+  } catch (err) {
+    return NextResponse.json({ error: `Could not check which page is yours: ${(err as Error).message}` }, { status: 502 });
+  }
   const value = doc?.result?.[field];
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return NextResponse.json({ error: "That entry has no picture in this spot to crop." }, { status: 404 });
