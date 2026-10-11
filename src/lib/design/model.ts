@@ -277,7 +277,10 @@ export function designCss(design: Design): string {
   for (const [key, look] of Object.entries(design.items)) {
     const s = sel(key);
     const { self, text } = lookDecls(look, { geometry: false });
-    const geo = lookDecls({ x: look.x, y: look.y, w: look.w, h: look.h }, { geometry: true }).self;
+    // the write-up under the portrait never scrolls or clips: a height set on it is a minimum, and long text grows the box
+    const grow = key === "write-up" && look.h;
+    const geo = lookDecls({ x: look.x, y: look.y, w: look.w, h: grow ? undefined : look.h }, { geometry: true }).self;
+    if (grow) geo.push(`min-height: ${look.h}px !important`);
     if (self.length) out.push(`${s}{${self.join(";")}}`);
     if (text.length) out.push(`${s},${s} *{${text.join(";")}}`);
     if (look.z !== undefined) out.push(`:where(${s}){position:relative}`);
