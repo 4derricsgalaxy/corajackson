@@ -1,8 +1,8 @@
 import { cache } from "react";
 import { site } from "../cms/client";
 import { loadLocalContent } from "../data/local";
-import { fromCms } from "./image";
-import { TYPES, type FamilyMember, type HistoryEntry, type Photo, type SiteSettings, type Story, type TreeNode } from "./types";
+import { fromCms, nestedFromCms } from "./image";
+import { TYPES, type Family, type FamilyMember, type HistoryEntry, type Partner, type Photo, type SiteImage, type SiteSettings, type Story, type TreeNode } from "./types";
 
 type Doc = Record<string, unknown> & { _id: string; _type?: string; _order?: string };
 
@@ -16,6 +16,33 @@ const refId = (v: unknown): string | null => {
 };
 const refIds = (v: unknown): string[] => (Array.isArray(v) ? v.map(refId).filter((x): x is string => Boolean(x)) : []);
 const images = (v: unknown) => (Array.isArray(v) ? v.map(fromCms).filter((x): x is NonNullable<typeof x> => Boolean(x)) : undefined);
+const partners = (v: unknown): Partner[] | undefined =>
+  Array.isArray(v)
+    ? v.flatMap((p) => {
+        const row = (p ?? {}) as Record<string, unknown>;
+        const name = str(row.name);
+        return name ? [{ name, photo: fromCms(row.photo) }] : [];
+      })
+    : undefined;
+const families = (v: unknown): Family[] | undefined =>
+  Array.isArray(v)
+    ? v.map((f, i) => {
+        const row = (f ?? {}) as Record<string, unknown>;
+        const kids = Array.isArray(row.children) ? row.children : [];
+        return {
+          key: str(row._key) ?? `family-${i}`,
+          role: str(row.role),
+          name: str(row.name),
+          status: str(row.status),
+          photo: nestedFromCms(row.photo),
+          children: kids.flatMap((k) => {
+            const kid = (k ?? {}) as Record<string, unknown>;
+            const childId = refId(kid.child);
+            return childId ? [{ childId, photo: nestedFromCms(kid.photo) }] : [];
+          }),
+        };
+      })
+    : undefined;
 const rich = (v: unknown) => (Array.isArray(v) ? v : str(v));
 
 async function fetchAll(type: string, include: string[] = []): Promise<Doc[]> {
@@ -41,6 +68,8 @@ const toMember = (d: Doc): FamilyMember => ({
   parentId: refId(d.parent),
   lineageId: refId(d.lineage),
   spouse: str(d.spouse),
+  families: families(d.families),
+  partners: partners(d.partners),
   parentNote: str(d.parentNote),
   birthDate: str(d.birthDate),
   deathDate: str(d.deathDate),
@@ -50,7 +79,9 @@ const toMember = (d: Doc): FamilyMember => ({
   shortBio: str(d.shortBio),
   bio: rich(d.bio),
   portrait: fromCms(d.portrait),
+  treePhoto: fromCms(d.treePhoto),
   heroImage: fromCms(d.heroImage),
+  heroStrength: num(d.heroStrength),
   gallery: images(d.gallery),
   accentColor: str(d.accentColor),
   sortOrder: str(d._order),
@@ -115,6 +146,9 @@ const toSettings = (d: Doc): SiteSettings => ({
   treeImage: fromCms(d.treeImage),
   backgroundImage: fromCms(d.backgroundImage),
   footerText: str(d.footerText),
+  bioFont: str(d.bioFont),
+  bioFontStyle: str(d.bioFontStyle),
+  bioFontSize: str(d.bioFontSize),
   contactEmail: str(d.contactEmail),
   primaryColor: str(d.primaryColor),
   accentColor: str(d.accentColor),
@@ -144,7 +178,7 @@ async function withFallback<T>(remote: () => Promise<T>, local: () => T): Promis
 /* ---------- public API ---------- */
 export const getMembers = cache(async (): Promise<FamilyMember[]> =>
   withFallback(
-    async () => (await fetchAll(TYPES.members, ["portrait", "heroImage", "gallery"])).map(toMember).sort(bySort),
+    async () => (await fetchAll(TYPES.members, ["portrait", "treePhoto", "heroImage", "gallery"])).map(toMember).sort(bySort),
     () => loadLocalContent().members.filter((m) => m.published !== false).sort(bySort),
   ),
 );
@@ -180,6 +214,19 @@ export const getSettings = cache(async (): Promise<SiteSettings> =>
   ),
 );
 
+/**
+ * Every fully resolved image the site already loads, by asset id. Images stored inside list items
+ * (a family block's photos) come back from the CMS unresolved; `resolveImage` finishes them from here.
+ */
+export const getAssetIndex = cache(async (): Promise<Map<string, SiteImage>> => {
+  const [members, photos] = await Promise.all([getMembers(), getPhotos()]);
+  const index = new Map<string, SiteImage>();
+  const add = (img?: SiteImage) => { if (img?.assetId && !index.has(img.assetId)) index.set(img.assetId, img); };
+  for (const m of members) { add(m.portrait); add(m.treePhoto); add(m.heroImage); m.gallery?.forEach(add); }
+  for (const p of photos) add(p.image);
+  return index;
+});
+
 /* ---------- derived: the tree ---------- */
 export interface FamilyGraph {
   root: TreeNode | null;
@@ -193,11 +240,20 @@ export const getFamilyGraph = cache(async (): Promise<FamilyGraph> => {
   const members = await getMembers();
   const byId = new Map<string, TreeNode>();
   for (const m of members) byId.set(m._id, { ...m, children: [], depth: 0 });
-  let root: TreeNode | null = null;
+  const tops: TreeNode[] = [];
   for (const node of byId.values()) {
     const parent = node.parentId ? byId.get(node.parentId) : undefined;
     if (parent) parent.children.push(node);
-    else if (!root || node.generation < root.generation) root = node;
+    else tops.push(node);
+  }
+  // The top of the tree is the parentless person with the most descendants (Cora), so a new entry saved
+  // without a Parent can never take her place; it just gets its own page until its Parent is set.
+  const size = (n: TreeNode): number => n.children.reduce((sum, c) => sum + 1 + size(c), 0);
+  let root: TreeNode | null = null;
+  let best = -1;
+  for (const n of tops) {
+    const s = size(n);
+    if (s > best || (s === best && root && n.generation < root.generation)) { root = n; best = s; }
   }
   const bySlug = new Map<string, TreeNode>();
   const all: TreeNode[] = [];

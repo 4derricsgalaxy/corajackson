@@ -1,6 +1,14 @@
 import type { FamilyGraph } from "./content/queries";
 import type { Photo, SiteImage } from "./content/types";
-import { lineColor } from "./tree-layout";
+
+/** Distinct hue per family line (album accent), used when a member has no accent color set. */
+const LINE_COLORS = ["#d8a63a", "#8a5a3a", "#5f9a48", "#c8508f", "#c8433d", "#e0853a", "#d98a8a", "#3d95d1", "#7b5c8a", "#3f7a6a"];
+function lineColor(index: number, fallback?: string): string {
+  if (fallback) return fallback;
+  if (index < 0) return "#efe3c8";
+  return LINE_COLORS[index % LINE_COLORS.length];
+}
+
 
 export interface Album {
   slug: string;

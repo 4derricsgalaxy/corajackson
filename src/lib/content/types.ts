@@ -1,3 +1,4 @@
+import type { ImageCrop, ImageFocus } from "./crop";
 /** Content types for the site. Source of record is Snackbox CMS. */
 
 /** A resolved image, ready for <img>: CDN url + srcset built by the CMS. */
@@ -10,6 +11,24 @@ export interface SiteImage {
   alt?: string | null;
   /** CSS object-position honoring the CMS hotspot/crop */
   position?: string;
+  /** CMS crop + hotspot (fractions of the picture); cropStyle() zooms the <img> into the crop */
+  crop?: ImageCrop;
+  focus?: ImageFocus;
+  /** Snackbox asset id, when known - lets a nested image be matched to its fully resolved copy */
+  assetId?: string;
+}
+
+/**
+ * An image stored INSIDE a list item. The CMS never resolves those (no srcset, and `url` only if the editor
+ * saved one), so they are finished at render time against the asset index - see `resolveImage`.
+ */
+export interface NestedImage {
+  assetId?: string;
+  url?: string;
+  alt?: string | null;
+  position?: string;
+  crop?: ImageCrop;
+  focus?: ImageFocus;
 }
 
 /** Portable Text blocks (Snackbox) or legacy HTML (seed). */
@@ -24,6 +43,10 @@ export interface FamilyMember {
   parentId?: string | null;
   lineageId?: string | null;
   spouse?: string;
+  /** "Children on this page": one block per other parent, holding the children and the photo each gets on THIS page. */
+  families?: Family[];
+  /** Superseded by `families`; still read for a member whose children are not listed there. */
+  partners?: Partner[];
   parentNote?: string;
   birthDate?: string;
   deathDate?: string;
@@ -33,12 +56,32 @@ export interface FamilyMember {
   shortBio?: string;
   bio?: RichContent;
   portrait?: SiteImage;
+  /** Childhood photo: this person's frame on the Family Tree and their tile under a parent's Children. Falls back to the portrait. */
+  treePhoto?: SiteImage;
   heroImage?: SiteImage;
+  /** Background strength, 0-100 (percent). Empty = the standard 45. Applies to the hero image or the default leaves. */
+  heroStrength?: number;
   gallery?: SiteImage[];
   accentColor?: string;
   sortOrder?: number | string;
   featured?: boolean;
   published?: boolean;
+}
+
+export interface Partner {
+  name: string;
+  photo?: SiteImage;
+}
+
+export interface Family {
+  key: string;
+  /** "Father" | "Mother" for a block with children, "Spouse" | "Partner" for a childless one */
+  role?: string;
+  name?: string;
+  /** as typed, e.g. "divorced" - title-cased where the parent's page shows it */
+  status?: string;
+  photo?: NestedImage;
+  children: { childId: string; photo?: NestedImage }[];
 }
 
 export interface Story {
@@ -94,6 +137,10 @@ export interface SiteSettings {
   treeImage?: SiteImage;
   backgroundImage?: SiteImage;
   footerText?: string;
+  /** Site settings > write-up font / style / size: the text under every person's portrait */
+  bioFont?: string;
+  bioFontStyle?: string;
+  bioFontSize?: string;
   contactEmail?: string;
   primaryColor?: string;
   accentColor?: string;

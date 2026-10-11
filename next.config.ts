@@ -38,6 +38,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   images: { unoptimized: true },
+  // the server-side HEIC converter (Add photos fallback) ships its own WebAssembly; load it as-is
+  serverExternalPackages: ["heic-convert"],
   async redirects() {
     return Object.entries(OLD_SLUGS).map(([from, to]) => ({ source: `/${from}`, destination: to, permanent: true }));
   },

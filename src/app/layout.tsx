@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
+import { draftMode } from "next/headers";
 import Script from "next/script";
 import "./globals.css";
-import { fraunces, newsreader, plexMono } from "./fonts";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
-import { buildNavData } from "@/lib/nav";
+import { bioFontVariables, clarendon, didot, lulo, poppins, proxima } from "./fonts";
 import { getSettings } from "@/lib/content/queries";
+import { CropDialog } from "@/components/design/CropDialog";
+import { DesignEditor } from "@/components/design/DesignEditor";
+import { EditShortcut } from "@/components/wix/layout/EditShortcut";
 
 export const revalidate = 3600;
 
@@ -15,28 +16,28 @@ const PROJECT = process.env.NEXT_PUBLIC_SNACKBOX_PROJECT ?? "corajackson";
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   return {
-    title: { default: s.title, template: `%s · ${s.title}` },
-    description: s.tagline ?? "A living family tree honoring Ms. Cora Mae Jackson of Brinkley, Arkansas, her eight children, and every generation since.",
+    title: { default: s.title, template: `%s | ${s.title}` },
+    description: s.tagline ?? "Honoring the life and legacy of Ms. Cora Mae Jackson of Brinkley, Arkansas, her eight children, and every generation since.",
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
     openGraph: { type: "website", siteName: s.title },
   };
 }
 
+/**
+ * The original Wix site had no header or menu: every page is a white canvas on
+ * a gray surround, and navigation lives at the bottom of each page.
+ */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [nav, settings] = await Promise.all([buildNavData(), getSettings()]);
+  // on-site editing (draft mode) also gets the Design tool: move, resize, restyle and add things on any page
+  const editing = (await draftMode()).isEnabled;
   return (
-    <html lang="en" suppressHydrationWarning className={`${fraunces.variable} ${newsreader.variable} ${plexMono.variable}`}>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem('cj-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t}catch(e){}`,
-          }}
-        />
-      </head>
-      <body className="relative">
-        <Header nav={nav} />
-        <main className="relative z-10">{children}</main>
-        <Footer nav={nav} footerText={settings.footerText} />
+    <html lang="en" className={`${proxima.variable} ${didot.variable} ${lulo.variable} ${clarendon.variable} ${poppins.variable} ${bioFontVariables}`}>
+      <body>
+        <main className="relative px-0 pb-[52px] pt-0 md:pt-[5px]">{children}</main>
+        {editing && <DesignEditor />}
+        {editing && <CropDialog />}
+        {/* Ctrl+E: edit the page you are on */}
+        <EditShortcut editing={editing} />
         {/* Snackbox on-page editing: inert for visitors, activates for signed-in editors */}
         <Script id="snackbox-overlay" strategy="afterInteractive" src={`${CMS}/overlay.js`} data-project={PROJECT} />
       </body>
