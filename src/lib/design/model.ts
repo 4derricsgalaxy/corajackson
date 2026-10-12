@@ -284,10 +284,11 @@ export function designCss(design: Design): string {
   for (const [key, look] of Object.entries(design.items)) {
     const s = sel(key);
     const { self, text } = lookDecls(look, { geometry: false });
-    // the write-up under the portrait (and the block holding it) never scrolls or clips: a height set on them is a minimum,
-    // and long text grows the box
-    const grow = (key === "write-up" || key === "bio-block") && look.h;
-    const geo = lookDecls({ x: look.x, y: look.y, w: look.w, h: grow ? undefined : look.h }, { geometry: true }).self;
+    // the write-up under the portrait is the same fixed box on every page (Joanne's size; long text scrolls inside it),
+    // so a size set on it is ignored; a height on the block holding it is a minimum
+    const fixed = key === "write-up";
+    const grow = key === "bio-block" && look.h;
+    const geo = lookDecls({ x: look.x, y: look.y, w: fixed ? undefined : look.w, h: fixed || grow ? undefined : look.h }, { geometry: true }).self;
     if (grow) geo.push(`min-height: ${look.h}px !important`);
     if (self.length) out.push(`${s}{${self.join(";")}}`);
     if (text.length) out.push(`${s},${s} *{${text.join(";")}}`);
