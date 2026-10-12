@@ -37,7 +37,7 @@ This list is everything under *Children* on that person's page. It works the sam
 - **One block per other parent.** Each block has: *They are the children's...* (Father / Mother; Spouse / Partner for someone with no children here), the **other parent's name**, **marital status** (e.g. `divorced`, `never married`, `married 1984 to present`), and **their photo** (the small black-framed picture beside the group).
 - **Children** inside the block: pick the child's Family Member entry, and choose a **Photo on this page**. That picture is used ONLY here - for example the photo of Josh on Tammie's page. Josh's own page keeps its own **Portrait**, and the Family Tree keeps his **Childhood photo**. Leave *Photo on this page* empty and the site falls back to his Childhood photo, then his Portrait.
 - **Order:** blocks and children show in the order of the list - drag to rearrange.
-- The line beside a child's own portrait ("Father: Donnie Lopp (divorced)") is taken from the block they sit in on their parent's page, so it is typed once, on the parent.
+- The other parent ("Father: Donnie Lopp (divorced)") shows only here, in the parent's Children column; it is not repeated beside the child's own portrait.
 - **Safety net:** a person whose **Parent** is set to this member but who isn't in the list still shows on the page automatically (grouped by their own *Other parent* field), so nobody disappears. Add them to the list to control their block, order and photo.
 - For a parent with no other parent to show (e.g. Cora), use one block with the name left empty.
 

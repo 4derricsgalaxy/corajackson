@@ -72,12 +72,6 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const parent = person.parentId ? graph.byId.get(person.parentId) : undefined;
   const up = parent && parent.depth > 0 ? { href: `/family/${parent.slug}`, label: firstName(parent) } : { href: "/", label: "Home" };
 
-  // "Father: Donnie Lopp (divorced)" beside the portrait comes from the block this person sits in on their parent's
-  // page, so it is typed once there; the person's own `parentNote` is only the fallback.
-  const homeBlock = parent?.families?.find((f) => f.name && f.children.some((c) => c.childId === person._id));
-  const otherParent = parent && homeBlock?.name
-    ? { docId: parent._id, field: "families", label: `${homeBlock.role ?? "Parent"}:`, value: homeBlock.status ? `${homeBlock.name} (${homeBlock.status})` : homeBlock.name }
-    : undefined;
 
   const t = pd();
   // captions (labels, headings, buttons, child names) can be re-worded per page with the Design tool
@@ -131,7 +125,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")} {...t("portrait")}>
                   <PersonPortrait image={person.portrait} name={person.title} width={person.children.length === 0 ? 243 : 160} height={person.children.length === 0 ? 327 : 215} priority />
                 </div>
-                <PersonFacts person={person} otherParent={otherParent} editing={editing} design={design} />
+                <PersonFacts person={person} editing={editing} design={design} />
                 {hasBio ? (
                   <div className={quoteClass} {...editableField(person._id, "bio")} {...t("write-up")}>
                     <RichText content={person.bio} className="wix-quote" />
