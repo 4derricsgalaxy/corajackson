@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
+import { actorFor, fromPage, logMutation } from "@/lib/cms/edit-log";
 import { mayChangeFor, notYours, pageAccess } from "@/lib/cms/page-access";
 import { cacheTags } from "@/lib/cms/sdk";
 
@@ -87,11 +88,14 @@ export async function POST(req: NextRequest) {
     fetch(`${api}/mutate`, {
       method: "POST",
       headers: { ...auth, "Content-Type": "application/json" },
-      body: JSON.stringify({ mutations, actor: "Add photos", perspective: "published" }),
+      body: JSON.stringify({ mutations, actor: actorFor(editor, "Add photos"), perspective: "published" }),
       cache: "no-store",
     }).catch(() => null);
 
-  const created = await mutate([{ create: { type: PHOTO_TYPE, id, data } }]);
+  const created = await mutate([
+    { create: { type: PHOTO_TYPE, id, data } },
+    logMutation(editor, { tool: "Add photos", page: fromPage(req), entries: [id], detail: `Added "${title}" to ${person ? targetTitle : `${targetTitle}'s family album`}` }),
+  ]);
   if (!created?.ok) {
     const detail = created ? await created.text().catch(() => "") : "";
     return NextResponse.json({ error: `Snackbox did not save the photo (${created?.status ?? "no answer"}). ${detail.slice(0, 160)}` }, { status: 502 });

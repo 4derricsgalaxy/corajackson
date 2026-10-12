@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
+import { actorFor, logMutation } from "@/lib/cms/edit-log";
 import { mayChange, notYours, pageAccess } from "@/lib/cms/page-access";
 import { getAssetIndex, getFamilyGraph } from "@/lib/content/queries";
 
@@ -60,7 +61,10 @@ export async function POST(req: NextRequest) {
   const res = await fetch(`${editor.api}/mutate`, {
     method: "POST",
     headers: { ...editor.auth, "Content-Type": "application/json" },
-    body: JSON.stringify({ mutations: [{ patch }], actor: "Design tool" }),
+    body: JSON.stringify({
+      mutations: [{ patch }, logMutation(editor, { tool: "Background", page: path, entries: [person._id], detail: body?.remove === true ? "Removed the page background" : set.heroImage ? `New page background (${(set.heroImage as { _ref: string })._ref})` : `Background strength ${set.heroStrength ?? "back to standard"}` })],
+      actor: actorFor(editor, "Background"),
+    }),
     cache: "no-store",
   });
   if (!res.ok) {

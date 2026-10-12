@@ -85,6 +85,10 @@ The facts themselves (dates, places, work), the name and the write-up are the pe
 
 The Design tool also moves, resizes, restyles (font, size, bold, color, fill, border), cuts / copies / pastes pieces between pages, adds text boxes and pictures, and sets the page background. Moves and sizes apply on computer-width screens; phones re-flow the page. The write-up under the portrait is the same size on every page (Joanne's box); longer text scrolls inside it, so its size can't be changed. **Page → Versions** brings back an earlier save.
 
+## Who changed what (Edit log)
+
+Every change made **on the website** with Design, the background buttons, Crop or Add photos also writes one entry to **Edit log** in Snackbox: when (Pacific time), who (the signed-in email), which tool, which page, and which entries were changed. The change and its log entry are saved together, so a change can't be saved without being logged. Changes made here in Studio aren't listed there; Studio shows those on each entry (last edited by). Family members can't see the Edit log.
+
 ## Add a new family member
 
 1. Open **Family Members** -> **Add item**. The fields run in the same order as the page.

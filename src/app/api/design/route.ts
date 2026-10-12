@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor, type EditorWrite } from "@/lib/cms/editor-auth";
+import { actorFor, logMutation } from "@/lib/cms/edit-log";
 import { mayChange, notYours, pageAccess } from "@/lib/cms/page-access";
 import { cacheTags } from "@/lib/cms/sdk";
 import { cleanDesign, designDocId, isEmptyDesign, parseDesign, PATH_RE, type Design } from "@/lib/design/model";
@@ -96,11 +97,14 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });
   }
+  const pages = [...new Set(paths)];
+  const what = design === null ? "Back to the default format" : Array.isArray(body?.copyTo) ? `Copied this design to ${pages.length} page(s)` : "Saved the page design";
+  mutations.push(logMutation(editor, { tool: "Design", page: pages.length === 1 ? pages[0] : undefined, entries: pages.map(designDocId), detail: pages.length > 1 ? `${what}: ${pages.join(", ")}` : what }));
 
   const res = await fetch(`${editor.api}/mutate`, {
     method: "POST",
     headers: { ...editor.auth, "Content-Type": "application/json" },
-    body: JSON.stringify({ mutations, actor: "Design tool" }),
+    body: JSON.stringify({ mutations, actor: actorFor(editor, "Design") }),
     cache: "no-store",
   });
   if (!res.ok) {
@@ -109,5 +113,5 @@ export async function POST(req: NextRequest) {
   }
   revalidateTag(cacheTags.type(editor.project, DESIGN_TYPE), { expire: 0 });
   revalidatePath("/", "layout");
-  return NextResponse.json({ ok: true, saved: mutations.length, design: baseData ? JSON.parse(baseData) : null });
+  return NextResponse.json({ ok: true, saved: pages.length, design: baseData ? JSON.parse(baseData) : null });
 }

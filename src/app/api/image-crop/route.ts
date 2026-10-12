@@ -1,6 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
+import { actorFor, fromPage, logMutation } from "@/lib/cms/edit-log";
 import { mayChangeFor, notYours, pageAccess } from "@/lib/cms/page-access";
 import { cleanCrop, CROP_FIELDS } from "@/lib/content/crop";
 const DOC_RE = /^[A-Za-z0-9_.:-]{1,80}$/;
@@ -50,7 +51,10 @@ export async function POST(req: NextRequest) {
   const res = await fetch(`${api}/mutate`, {
     method: "POST",
     headers: { ...auth, "Content-Type": "application/json" },
-    body: JSON.stringify({ mutations: [{ patch: { id: docId, set: { [field]: next } } }], actor: "Crop tool" }),
+    body: JSON.stringify({
+      mutations: [{ patch: { id: docId, set: { [field]: next } } }, logMutation(editor, { tool: "Crop", page: fromPage(req), entries: [docId], detail: crop ? `Cropped the picture (${field})` : `Removed the crop (${field})` })],
+      actor: actorFor(editor, "Crop"),
+    }),
     cache: "no-store",
   });
   if (!res.ok) {
