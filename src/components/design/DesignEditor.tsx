@@ -104,10 +104,10 @@ function writeClip(from: string, items: Added[]) {
   }
 }
 
-/** every picture (iPhone HEIC too) becomes an upright JPEG of at most 2400px before upload (shared with "Add photos") */
+/** every picture (iPhone HEIC too) becomes an upright JPEG of at most 2400px before upload (shared with "Add photos"); see-through PNGs stay PNG */
 async function prepareUpload(file: File): Promise<{ blob: Blob; name: string; w: number; h: number }> {
   try {
-    return await preparePhoto(file);
+    return await preparePhoto(file, 2400, { keepTransparency: true });
   } catch (err) {
     throw new Error(err instanceof HeicDecodeError ? "This browser can't read that iPhone photo. Use “Add photos”, or save it as a JPG first." : (err as Error).message);
   }

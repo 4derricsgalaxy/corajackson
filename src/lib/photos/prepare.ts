@@ -2,7 +2,7 @@
  * Browser side of every photo upload (drag-and-drop "Add photos" and the Design tool).
  *
  * Any picture a family member has - including iPhone HEIC photos - becomes an upright JPEG of at most
- * 2400px before it leaves their computer: small enough for the site's 4.5 MB request cap, turned the right
+ * 2400px (the Design tool keeps see-through PNGs as PNG) before it leaves their computer: small enough for the site's 4.5 MB request cap, turned the right
  * way up (the CMS does not apply camera rotation), and without the phone's location data.
  */
 
@@ -54,8 +54,39 @@ async function decodeHeic(file: File): Promise<Blob> {
   }
 }
 
-/** Any picture -> an upright JPEG no larger than `maxSide` px, on a white background (for transparent PNGs). */
-export async function preparePhoto(file: File, maxSide = 2400): Promise<PreparedPhoto> {
+/** the request cap minus room for the form fields */
+const MAX_UPLOAD_BYTES = 4_300_000;
+
+function drawScaled(bmp: ImageBitmap, maxSide: number, fill: boolean): HTMLCanvasElement {
+  const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(bmp.width * scale));
+  c.height = Math.max(1, Math.round(bmp.height * scale));
+  const ctx = c.getContext("2d")!;
+  if (fill) {
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, c.width, c.height);
+  }
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  return c;
+}
+
+/** true when any pixel is even partly see-through */
+function hasTransparency(c: HTMLCanvasElement): boolean {
+  const px = c.getContext("2d")!.getImageData(0, 0, c.width, c.height).data;
+  for (let i = 3; i < px.length; i += 4) if (px[i] < 255) return true;
+  return false;
+}
+
+const toBlob = (c: HTMLCanvasElement, type: string, quality?: number) =>
+  new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not read that picture."))), type, quality));
+
+/**
+ * Any picture -> an upright JPEG no larger than `maxSide` px, on a white background.
+ * With `keepTransparency` (the Design tool), a PNG/WebP/GIF that has see-through areas - a logo, a cut-out,
+ * a shadow - stays a PNG with its transparency instead, shrunk further if needed to fit the upload cap.
+ */
+export async function preparePhoto(file: File, maxSide = 2400, opts: { keepTransparency?: boolean } = {}): Promise<PreparedPhoto> {
   const heic = await isHeicFile(file);
   const source: Blob = heic ? await decodeHeic(file) : file;
 
@@ -67,17 +98,27 @@ export async function preparePhoto(file: File, maxSide = 2400): Promise<Prepared
     if (heic) throw new HeicDecodeError("This browser could not read the iPhone photo.");
     throw new Error("This file isn't a picture the browser can open. Save it as a JPG and try again.");
   }
-  const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height));
-  const c = document.createElement("canvas");
-  c.width = Math.max(1, Math.round(bmp.width * scale));
-  c.height = Math.max(1, Math.round(bmp.height * scale));
-  const ctx = c.getContext("2d")!;
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, c.width, c.height);
-  ctx.drawImage(bmp, 0, 0, c.width, c.height);
-  bmp.close();
-  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("Could not read that picture."))), "image/jpeg", 0.88));
-  return { blob, name: `${baseName(file.name) || "photo"}.jpg`, w: c.width, h: c.height, heic };
+  try {
+    const canHaveAlpha = !heic && (/^image\/(png|webp|gif)$/i.test(file.type) || /\.(png|webp|gif)$/i.test(file.name));
+    if (opts.keepTransparency && canHaveAlpha) {
+      let side = maxSide;
+      let c = drawScaled(bmp, side, false);
+      if (hasTransparency(c)) {
+        let blob = await toBlob(c, "image/png");
+        while (blob.size > MAX_UPLOAD_BYTES && side > 400) {
+          side = Math.round(Math.min(side, Math.max(c.width, c.height)) * 0.8);
+          c = drawScaled(bmp, side, false);
+          blob = await toBlob(c, "image/png");
+        }
+        return { blob, name: `${baseName(file.name) || "picture"}.png`, w: c.width, h: c.height, heic };
+      }
+    }
+    const c = drawScaled(bmp, maxSide, true);
+    const blob = await toBlob(c, "image/jpeg", 0.88);
+    return { blob, name: `${baseName(file.name) || "photo"}.jpg`, w: c.width, h: c.height, heic };
+  } finally {
+    bmp.close();
+  }
 }
 
 /** "IMG_1234.HEIC" -> "IMG_1234" */
