@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { clsx } from "clsx";
 import { WixCanvas } from "@/components/wix/WixCanvas";
-import { FamilyTreeButton, FooterLabel, HomeButton, footerLabelText } from "@/components/wix/WixNav";
+import { FamilyTreeButton, FooterLabel, HomeButton, SiteLinks, footerLabelText } from "@/components/wix/WixNav";
 import type { Album } from "@/lib/albums";
 import { pd } from "@/lib/design/keys";
 import { GalleryGrid } from "./GalleryGrid";
@@ -54,6 +54,7 @@ export function GalleryShell({ items, albums, current, title, footerText, editin
       <div className="wix-gallery-nav" {...t("btn-tree", undefined, "Family Tree button")}>
         <FamilyTreeButton />
       </div>
+      <SiteLinks current="/gallery" className="wix-gallery-links" />
       <FooterLabel text={footerText} layout={t("footer")} />
     </WixCanvas>
   );

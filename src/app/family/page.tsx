@@ -112,7 +112,7 @@ export default async function FamilyIndexPage() {
         })}
       </div>
 
-      <PageNav className="wix-famidx-nav" layout={t("nav")} />
+      <PageNav className="wix-famidx-nav" layout={t("nav")} current="/family" />
       <div {...(settings._id ? editableField(settings._id, "footerText") : {})}>
         <FooterLabel text={settings.footerText} layout={t("footer")} />
       </div>

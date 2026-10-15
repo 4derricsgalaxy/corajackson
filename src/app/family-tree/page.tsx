@@ -3,7 +3,7 @@ import Link from "next/link";
 import { clsx } from "clsx";
 import { CmsImage } from "@/components/ui/CmsImage";
 import { WixCanvas } from "@/components/wix/WixCanvas";
-import { HomeButton, footerLabelText } from "@/components/wix/WixNav";
+import { HomeButton, SiteLinks, footerLabelText } from "@/components/wix/WixNav";
 import { TreeFrame, initialsOf } from "@/components/wix/tree/TreeFrame";
 import { TREE_CENTER, TREE_STAGE, assignSlots } from "@/components/wix/tree/slots";
 import { editableField } from "@/lib/cms/sdk";
@@ -73,6 +73,7 @@ export default async function FamilyTreePage() {
         <div className="wix-tree-home" {...t("btn-home", undefined, "Home button")}>
           <HomeButton large />
         </div>
+        <SiteLinks className="wix-tree-links" />
       </div>
     </WixCanvas>
   );

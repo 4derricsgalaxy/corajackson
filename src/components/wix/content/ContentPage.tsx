@@ -12,7 +12,7 @@ export function ContentPage({ children, path, footerText, className }: { childre
   return (
     <WixCanvas path={path} minHeight={651} className={clsx("wix-content-page", footerLabelText(footerText).length > 40 && "wix-content-long-footer", className)}>
       <div className="wix-content-main" data-pd="content" data-pd-label="Page content">{children}</div>
-      <PageNav className="wix-content-nav" layout={{ "data-pd": "nav" }} />
+      <PageNav className="wix-content-nav" layout={{ "data-pd": "nav" }} current={path} />
       <FooterLabel text={footerText} layout={{ "data-pd": "footer" }} />
     </WixCanvas>
   );

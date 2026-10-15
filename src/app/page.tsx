@@ -59,7 +59,7 @@ export default async function HomePage() {
           {settings.heroHeading ?? settings.title}
         </h1>
 
-        <Link href="/gallery" className="wix-btn-outline wix-home-btn wix-home-btn-meet" {...t("home-btn-meet")}>
+        <Link href="/family" className="wix-btn-outline wix-home-btn wix-home-btn-meet" {...t("home-btn-meet")}>
           Meet the Family
         </Link>
 

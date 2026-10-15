@@ -22,13 +22,35 @@ export function FamilyTreeButton({ className, piece }: { className?: string; pie
   );
 }
 
+const SITE_LINKS: [string, string][] = [
+  ["/family", "Family"],
+  ["/gallery", "Gallery"],
+  ["/stories", "Stories"],
+  ["/history", "History"],
+];
+
+/** Small text links to the site's sections, under the footer nav (the original Wix site linked none of these). */
+export function SiteLinks({ current, className }: { current?: string; className?: string }) {
+  return (
+    <p className={clsx("wix-site-links", className)} data-pd="site-links" data-pd-label="Section links">
+      {SITE_LINKS.map(([href, label], i) => (
+        <span key={href}>
+          {i > 0 && <span aria-hidden className="wix-site-links-dot">·</span>}
+          <Link href={href} aria-current={current === href ? "page" : undefined}>{label}</Link>
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /** The home icon stacked over the Family Tree pill, centered — the footer nav of every inner page. */
-export function PageNav({ className, layout, design }: { className?: string; layout?: object; design?: Record<string, Look> }) {
+export function PageNav({ className, layout, design, current }: { className?: string; layout?: object; design?: Record<string, Look>; current?: string }) {
   return (
     <nav aria-label="Page" className={clsx("flex flex-col items-center gap-[17px]", className)} {...layout}>
       <HomeButton piece={{ "data-pd": "btn-home" }} />
       {/* with a page design passed in, the pill's words can be changed on that page */}
       <FamilyTreeButton piece={design ? pdWords(design)("btn-tree", "Family Tree") : { "data-pd": "btn-tree" }} />
+      <SiteLinks current={current} />
     </nav>
   );
 }
