@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     method: "POST",
     headers: { ...editor.auth, "Content-Type": "application/json" },
     body: JSON.stringify({
-      mutations: [{ patch }, logMutation(editor, { tool: "Background", page: path, entries: [person._id], detail: body?.remove === true ? "Removed the page background" : set.heroImage ? `New page background (${(set.heroImage as { _ref: string })._ref})` : `Background strength ${set.heroStrength ?? "back to standard"}` })],
+      mutations: [{ patch }, logMutation(editor, { tool: "Background", page: path, entries: [person._id], detail: backgroundDetail(body?.remove === true, set, previous) })],
       actor: actorFor(editor, "Background"),
     }),
     cache: "no-store",
@@ -73,4 +73,12 @@ export async function POST(req: NextRequest) {
   }
   revalidatePath("/", "layout");
   return NextResponse.json({ ok: true, previous });
+}
+
+/** what the Edit log says, with the picture it replaced so a removed or replaced background can be put back */
+function backgroundDetail(removed: boolean, set: Record<string, unknown>, previous: string | undefined) {
+  const was = previous ? ` (was ${previous})` : "";
+  if (removed) return `Removed the page background${was}`;
+  if (set.heroImage) return `New page background ${(set.heroImage as { _ref: string })._ref}${was}`;
+  return `Background strength ${set.heroStrength ?? "back to standard"}`;
 }

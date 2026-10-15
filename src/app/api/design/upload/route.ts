@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
+import { actorFor, fromPage, logMutation } from "@/lib/cms/edit-log";
 
 // Design tool: a picture from the editor's computer goes into the Snackbox media library, and the page
 // design points at it. The browser shrinks big pictures first (Vercel caps a request at 4.5 MB).
@@ -26,5 +27,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: `Snackbox did not accept the picture (${res.status}).` }, { status: 502 });
   }
   const { id, url, srcset, width, height } = json.result;
+  // the Edit log notes who put the picture in the library (best effort: the upload itself already worked)
+  await fetch(`${editor.api}/mutate`, {
+    method: "POST",
+    headers: { ...editor.auth, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mutations: [logMutation(editor, { tool: "Picture upload", page: fromPage(req), entries: [id ?? url], detail: `Uploaded "${file.name || "picture"}" to the media library` })],
+      actor: actorFor(editor, "Picture upload"),
+    }),
+    cache: "no-store",
+  }).catch(() => null);
   return NextResponse.json({ id, url, srcset: srcset || undefined, width: width ?? null, height: height ?? null });
 }

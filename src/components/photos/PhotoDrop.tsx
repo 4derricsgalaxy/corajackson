@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { failText, plainError, sendForm } from "@/lib/net";
 import { HeicDecodeError, MAX_RAW_BYTES, PHOTO_ACCEPT, isHeicFile, looksLikePicture, preparePhoto, titleFromFileName } from "@/lib/photos/prepare";
 
 /**
@@ -15,6 +16,17 @@ export type PhotoTarget =
 
 type Status = "waiting" | "converting" | "uploading" | "done" | "error";
 type Item = { key: string; name: string; status: Status; message?: string; thumb?: string; draft?: boolean };
+
+/** fingerprint of the original file + the page it is added to (undefined if this browser can't make one) */
+async function photoKey(file: File, targetId: string): Promise<string | undefined> {
+  try {
+    const hex = (b: ArrayBuffer) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");
+    const fileHash = hex(await crypto.subtle.digest("SHA-256", await file.arrayBuffer()));
+    return hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${targetId}:${fileHash}`))).slice(0, 24);
+  } catch {
+    return undefined;
+  }
+}
 
 const STATUS_TEXT: Record<Status, string> = {
   waiting: "Waiting…",
@@ -35,58 +47,93 @@ export function PhotoDrop({ target }: { target: PhotoTarget }) {
 
   const update = (key: string, patch: Partial<Item>) => setItems((list) => list.map((it) => (it.key === key ? { ...it, ...patch } : it)));
 
+  // photos picked or dropped while others are still uploading wait their turn (never silently ignored)
+  const queue = useRef<(Item & { file: File })[]>([]);
+  const running = useRef(false);
+
+  const addOne = useCallback(
+    async (it: Item & { file: File }): Promise<boolean> => {
+      const { file, key } = it;
+      if (!looksLikePicture(file)) {
+        update(key, { status: "error", message: "This isn't a picture." });
+        return false;
+      }
+      try {
+        update(key, { status: "converting" });
+        const fingerprint = await photoKey(file, target.id);
+        let body: Blob;
+        let name: string;
+        try {
+          const prepared = await preparePhoto(file);
+          body = prepared.blob;
+          name = prepared.name;
+        } catch (err) {
+          // the browser couldn't read an iPhone photo: let the website convert the original instead
+          if (err instanceof HeicDecodeError || (await isHeicFile(file))) {
+            if (file.size > MAX_RAW_BYTES) throw new Error("This iPhone photo is too big to convert here. Save it as a JPG and try again.");
+            body = file;
+            name = /\.hei[cf]$/i.test(file.name) ? file.name : `${file.name || "photo"}.heic`;
+          } else throw err;
+        }
+        update(key, { status: "uploading", thumb: body.type === "image/jpeg" ? URL.createObjectURL(body) : undefined });
+        const form = new FormData();
+        form.set("file", body, name);
+        form.set(target.kind === "person" ? "person" : "line", target.id);
+        if (fingerprint) form.set("key", fingerprint);
+        const title = titleFromFileName(file.name);
+        if (title) form.set("title", title);
+        // a timeout or a busy server is retried once: with the fingerprint that can never make a second copy
+        let res: Response | undefined;
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < (fingerprint ? 2 : 1) && !res?.ok; attempt++) {
+          if (attempt) await new Promise((r) => setTimeout(r, 2500));
+          try {
+            res = await sendForm("/api/photos/add", form);
+            if (res.status < 500) break;
+          } catch (err) {
+            lastErr = err;
+            res = undefined;
+          }
+        }
+        if (!res) throw new Error(plainError(lastErr, "add this photo"));
+        const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; live?: boolean; title?: string; already?: boolean };
+        if (!res.ok || !out.ok) throw new Error(out.error ?? failText(res.status, "add this photo"));
+        update(key, {
+          status: "done",
+          draft: out.live === false,
+          message: out.already
+            ? `Already in ${where} — not added twice.`
+            : out.live === false
+              ? "Saved, but not yet on the site: open Photos in Snackbox and press Publish."
+              : out.title,
+        });
+        return !out.already;
+      } catch (err) {
+        update(key, { status: "error", message: (err as Error).message || "Something went wrong." });
+        return false;
+      }
+    },
+    [target, where],
+  );
+
   const addFiles = useCallback(
     async (files: File[]) => {
-      if (!files.length || busy) return;
-      const batch: (Item & { file: File })[] = files.map((file, i) => ({ key: `${Date.now()}-${i}`, name: file.name || "photo", status: "waiting", file }));
-      setItems(batch.map(({ key, name, status }) => ({ key, name, status })));
+      if (!files.length) return;
+      const stamp = Date.now();
+      const batch: (Item & { file: File })[] = files.map((file, i) => ({ key: `${stamp}-${i}`, name: file.name || "photo", status: "waiting", file }));
+      // a new batch replaces a finished list; while photos are uploading it joins the end of the list
+      setItems((list) => [...(running.current ? list : []), ...batch.map(({ key, name, status }) => ({ key, name, status }))]);
+      queue.current.push(...batch);
+      if (running.current) return;
+      running.current = true;
       setBusy(true);
       let added = 0;
-      for (const it of batch) {
-        const { file, key } = it;
-        if (!looksLikePicture(file)) {
-          update(key, { status: "error", message: "This isn't a picture." });
-          continue;
-        }
-        try {
-          update(key, { status: "converting" });
-          let body: Blob;
-          let name: string;
-          try {
-            const prepared = await preparePhoto(file);
-            body = prepared.blob;
-            name = prepared.name;
-          } catch (err) {
-            // the browser couldn't read an iPhone photo: let the website convert the original instead
-            if (err instanceof HeicDecodeError || (await isHeicFile(file))) {
-              if (file.size > MAX_RAW_BYTES) throw new Error("This iPhone photo is too big to convert here. Save it as a JPG and try again.");
-              body = file;
-              name = /\.hei[cf]$/i.test(file.name) ? file.name : `${file.name || "photo"}.heic`;
-            } else throw err;
-          }
-          update(key, { status: "uploading", thumb: body.type === "image/jpeg" ? URL.createObjectURL(body) : undefined });
-          const form = new FormData();
-          form.set("file", body, name);
-          form.set(target.kind === "person" ? "person" : "line", target.id);
-          const title = titleFromFileName(file.name);
-          if (title) form.set("title", title);
-          const res = await fetch("/api/photos/add", { method: "POST", body: form });
-          const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string; live?: boolean; title?: string };
-          if (!res.ok || !out.ok) throw new Error(out.error ?? `Upload failed (${res.status}).`);
-          added++;
-          update(key, {
-            status: "done",
-            draft: out.live === false,
-            message: out.live === false ? "Saved, but not yet on the site: open Photos in Snackbox and press Publish." : out.title,
-          });
-        } catch (err) {
-          update(key, { status: "error", message: (err as Error).message || "Something went wrong." });
-        }
-      }
+      for (let it = queue.current.shift(); it; it = queue.current.shift()) if (await addOne(it)) added++;
+      running.current = false;
       setBusy(false);
       if (added) router.refresh();
     },
-    [busy, router, target],
+    [addOne, router],
   );
 
   // the whole window is the drop zone; only real files (not text or links dragged around the page) count
@@ -133,7 +180,7 @@ export function PhotoDrop({ target }: { target: PhotoTarget }) {
 
   return (
     <>
-      <button type="button" className="pd-ui photo-add-launch" onClick={() => input.current?.click()} disabled={busy} title={`Add photos to ${where}. You can also drag photos onto the page.`}>
+      <button type="button" className="pd-ui photo-add-launch" onClick={() => input.current?.click()} title={`Add photos to ${where}. You can also drag photos onto the page.`}>
         <span aria-hidden>＋</span> <strong>Add photos</strong>
       </button>
       <input

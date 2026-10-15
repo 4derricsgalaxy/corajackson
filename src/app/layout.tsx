@@ -19,7 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
     title: { default: s.title, template: `%s | ${s.title}` },
     description: s.tagline ?? "Honoring the life and legacy of Ms. Cora Mae Jackson of Brinkley, Arkansas, her eight children, and every generation since.",
     metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-    openGraph: { type: "website", siteName: s.title },
+    // the picture a shared link shows (Facebook, texts, email): Cora's portrait; a person's page shows their own
+    openGraph: { type: "website", siteName: s.title, images: s.heroImage?.url ? [{ url: s.heroImage.url, alt: s.title }] : undefined },
   };
 }
 

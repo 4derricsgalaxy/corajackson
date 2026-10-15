@@ -11,12 +11,17 @@ import { cacheTags } from "@/lib/cms/sdk";
 //
 // The browser normally sends an upright JPEG it already converted (see lib/photos/prepare.ts). When a
 // browser cannot read an iPhone HEIC photo it sends the original instead, and it is converted here.
+//
+// The browser also sends `key`: a fingerprint of the original file + the person/album. It becomes the entry's
+// id, so the same photo added to the same page twice (picked again, or re-sent after a timeout) is found
+// instead of saved a second time.
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const MAX_BYTES = 4_400_000; // Vercel caps a request at 4.5 MB
 const ID_RE = /^[A-Za-z0-9_.:-]{1,80}$/;
+const KEY_RE = /^[a-f0-9]{24}$/;
 const PHOTO_TYPE = "photo";
 
 type DocResult = { result?: Record<string, unknown> | null };
@@ -53,6 +58,16 @@ export async function POST(req: NextRequest) {
   const targetTitle = clean(target?.result?.title, 120);
   if (!target?.result || !targetTitle) return NextResponse.json({ error: "Couldn't find this person in Snackbox." }, { status: 404 });
 
+  // already added? (same fingerprint = same picture on the same page)
+  const key = form?.get("key");
+  const id = typeof key === "string" && KEY_RE.test(key) ? `photo-add-${key}` : `photo-add-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  if (typeof key === "string" && KEY_RE.test(key)) {
+    const existing = await fetch(`${api}/doc/${encodeURIComponent(id)}`, { headers: auth, cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<DocResult>) : null))
+      .catch(() => null);
+    if (existing?.result) return NextResponse.json({ ok: true, already: true, id, title: clean(existing.result.title, 120), live: true });
+  }
+
   // picture -> JPEG/PNG/WebP the CMS accepts (HEIC converted here only when the browser couldn't)
   let upload: Blob = file;
   let uploadName = file.name || "photo.jpg";
@@ -79,7 +94,6 @@ export async function POST(req: NextRequest) {
   const assetId = asset.json?.result?.id;
   if (!asset.ok || !assetId) return NextResponse.json({ error: `Snackbox did not accept the picture (${asset.status || "no answer"}).` }, { status: 502 });
 
-  const id = `photo-add-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   const data: Record<string, unknown> = { title, image: { _type: "asset", _ref: assetId, alt: title } };
   if (person) data.people = [{ _key: Math.random().toString(36).slice(2, 10), _ref: targetId }];
   else data.lineage = { _ref: targetId };

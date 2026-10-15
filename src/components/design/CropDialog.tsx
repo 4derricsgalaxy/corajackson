@@ -1,5 +1,6 @@
 "use client";
 
+import { failText, plainError, sendJson } from "@/lib/net";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { cleanCrop, CROP_FIELDS, cropStyle, type ImageCrop } from "@/lib/content/crop";
 
@@ -209,16 +210,13 @@ export function CropDialog() {
     }
     setStatus({ kind: "saving", text: "Saving…" });
     try {
-      const res = await fetch("/api/image-crop", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doc: target.doc, field: target.field, crop }),
-      });
+      // `src` = the picture this crop was drawn on: refused if that spot holds another picture by now
+      const res = await sendJson("/api/image-crop", { doc: target.doc, field: target.field, crop, src: target.src });
       const out = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(out.error ?? `Save failed (${res.status})`);
+      if (!res.ok) throw new Error(out.error ?? failText(res.status, "save the crop"));
       window.location.reload();
     } catch (err) {
-      setStatus({ kind: "error", text: err instanceof Error ? err.message : "Save failed" });
+      setStatus({ kind: "error", text: plainError(err, "save the crop") });
     }
   };
 

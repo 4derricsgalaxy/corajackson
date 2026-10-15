@@ -1,4 +1,5 @@
 import { cleanCrop, type ImageCrop } from "@/lib/content/crop";
+import { sanitizeHtml } from "./sanitize";
 
 /**
  * Page designs: what the on-page Design tool changes on one page, stored as JSON in that page's
@@ -158,16 +159,9 @@ function cleanLook(input: unknown, added = false): Look {
   return out;
 }
 
-/** Strip anything that can run code from a copied piece of page (the save route runs this on every save). */
+/** Keep only harmless tags / attributes / CSS of a copied piece of page (runs on every save and every page render). */
 export function cleanHtml(html: string): string {
-  return html
-    .slice(0, MAX_HTML)
-    .replace(/<\s*(script|style|iframe|object|embed|template|noscript|form|input|textarea|select|button|link|meta|base)\b[\s\S]*?(<\s*\/\s*\1\s*>|$)/gi, "")
-    .replace(/<\s*\/?\s*(script|style|iframe|object|embed|template|noscript|form|input|textarea|select|button|link|meta|base)\b[^>]*>/gi, "")
-    .replace(/\s(on[a-z]+|srcdoc|formaction|xlink:href)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
-    .replace(/(href|src|srcset|action)\s*=\s*("|')\s*(javascript|data|vbscript):[^"']*\2/gi, "")
-    .replace(/url\(\s*(['"]?)\s*(javascript|vbscript):[^)]*\)/gi, "none")
-    .replace(/expression\s*\(/gi, "(");
+  return sanitizeHtml(html, MAX_HTML);
 }
 
 export function cleanDesign(input: unknown): Design {
@@ -240,6 +234,23 @@ export function parseDesign(json: unknown): Design | undefined {
     return undefined;
   }
 }
+
+/** what is stored for a page: a person's page keeps its one background on its Snackbox entry, never in the design */
+export function storedDesign(path: string, design: Design | null): string {
+  if (!design || isEmptyDesign(design)) return "";
+  if (/^\/family\/[^/]+$/.test(path) && design.page.image) {
+    const page = { ...design.page };
+    delete page.image; delete page.imageFit; delete page.imageOpacity;
+    const d = { ...design, page };
+    return isEmptyDesign(d) ? "" : JSON.stringify(d);
+  }
+  return JSON.stringify(design);
+}
+/** the same design always gives the same string, however it was written */
+export const canonicalDesign = (data: unknown) => {
+  const d = parseDesign(data);
+  return d ? JSON.stringify(d) : "";
+};
 
 /* ---------- CSS ---------- */
 

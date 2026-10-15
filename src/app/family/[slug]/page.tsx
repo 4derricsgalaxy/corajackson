@@ -37,7 +37,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const graph = await getFamilyGraph();
   const m = graph.bySlug.get(slug);
   if (!m) return {};
-  return { title: m.title, description: m.shortBio ?? `${m.title}, part of the Cora Mae Jackson family.` };
+  const description = m.shortBio ?? `${m.title}, part of the Cora Mae Jackson family.`;
+  const settings = await getSettings();
+  const picture = m.portrait ?? m.treePhoto ?? settings.heroImage;
+  return {
+    title: m.title,
+    description,
+    openGraph: { type: "profile", siteName: settings.title, title: m.title.trim(), description, images: picture?.url ? [{ url: picture.url, alt: m.title.trim() }] : undefined },
+  };
 }
 
 /**

@@ -8,6 +8,7 @@ import { PIECE_LABELS } from "@/lib/design/keys";
 import { canCrop, openCrop } from "./CropDialog";
 import { snapshot } from "./snapshot";
 import { designStore, isDirty, useDesignState } from "./store";
+import { failText, plainError, sendForm, sendJson } from "@/lib/net";
 
 /**
  * The on-page Design tool (edit mode only). "Design" turns it on for the page you are on:
@@ -118,9 +119,14 @@ async function upload(file: File): Promise<Picked> {
   const form = new FormData();
   form.set("file", blob, name);
   form.set("alt", file.name.replace(/\.\w+$/, ""));
-  const res = await fetch("/api/design/upload", { method: "POST", body: form });
+  let res: Response;
+  try {
+    res = await sendForm("/api/design/upload", form);
+  } catch (err) {
+    throw new Error(plainError(err, "upload the picture"));
+  }
   const out = (await res.json().catch(() => ({}))) as { id?: string; url?: string; srcset?: string; width?: number | null; height?: number | null; error?: string };
-  if (!res.ok || !out.url) throw new Error(out.error ?? `Upload failed (${res.status})`);
+  if (!res.ok || !out.url) throw new Error(out.error ?? failText(res.status, "upload the picture"));
   return { src: out.url, srcset: out.srcset, w: out.width ?? w, h: out.height ?? h, alt: file.name.replace(/\.\w+$/, ""), asset: out.id };
 }
 
@@ -193,14 +199,18 @@ export function DesignEditor() {
   }, [s.path, s.design]);
 
   // a family member may change only their own page: ask once per page when the tool opens
-  const [access, setAccess] = useState<{ path: string; canEdit: boolean; own?: string } | null>(null);
+  // (if that can't be checked the tool stays closed, so nobody designs for an hour and is refused at Save)
+  const [access, setAccess] = useState<{ path: string; canEdit: boolean; own?: string; failed?: string } | null>(null);
   useEffect(() => {
     if (!active || !path || access?.path === path) return;
     let live = true;
-    fetch(`/api/design/access?path=${encodeURIComponent(path)}`, { cache: "no-store" })
-      .then((r) => r.json() as Promise<{ canEdit?: boolean; own?: string }>)
-      .then((r) => { if (live) setAccess({ path, canEdit: r.canEdit !== false, own: r.own }); })
-      .catch(() => { if (live) setAccess({ path, canEdit: true }); });
+    fetch(`/api/design/access?path=${encodeURIComponent(path)}`, { cache: "no-store", signal: AbortSignal.timeout(30_000) })
+      .then(async (r) => {
+        const out = (await r.json().catch(() => ({}))) as { canEdit?: boolean; own?: string; error?: string };
+        if (!r.ok) throw new Error(out.error ?? failText(r.status, "open Design"));
+        if (live) setAccess({ path, canEdit: out.canEdit === true, own: out.own });
+      })
+      .catch((err) => { if (live) setAccess({ path, canEdit: false, failed: plainError(err, "open Design") }); });
     return () => { live = false; };
   }, [active, path, access?.path]);
 
@@ -537,29 +547,38 @@ export function DesignEditor() {
   const personBackground = async (change: BgChange) => {
     setStatus({ kind: "busy", text: "Changing the background…" });
     try {
-      const res = await fetch("/api/design/background", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, ...change }) });
+      const res = await sendJson("/api/design/background", { path, ...change });
       const out = (await res.json().catch(() => ({}))) as { error?: string; previous?: string };
-      if (!res.ok) throw new Error(out.error ?? `Could not change the background (${res.status})`);
+      if (!res.ok) throw new Error(out.error ?? failText(res.status, "change the background"));
       if (change.remove || change.set) setBgPrevious(out.previous ?? null);
       setStatus({ kind: "ok", text: change.remove ? "Background removed. Visitors see it now." : "Background saved. Visitors see it now." });
       router.refresh();
     } catch (err) {
-      setStatus({ kind: "error", text: (err as Error).message });
+      setStatus({ kind: "error", text: plainError(err, "change the background") });
     }
   };
 
   /* ---------- save / reset / done ---------- */
-  const save = async () => {
+  const save = async (force = false) => {
     setStatus({ kind: "busy", text: "Saving…" });
     try {
-      const design = designStore.get().design;
-      const res = await fetch("/api/design", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ path, design }) });
-      const out = (await res.json().catch(() => ({}))) as { error?: string; design?: Design | null };
-      if (!res.ok) throw new Error(out.error ?? `Save failed (${res.status})`);
+      const { design, saved } = designStore.get();
+      // `base` = the saved design this edit started from: the server refuses if someone else saved since
+      const res = await sendJson("/api/design", { path, design, base: saved, force });
+      const out = (await res.json().catch(() => ({}))) as { error?: string; conflict?: boolean; design?: Design | null };
+      if (res.status === 409 && out.conflict) {
+        const yours = window.confirm(
+          `${out.error}\n\nOK = save YOUR version now (theirs is kept under Earlier versions, so it can be brought back).\nCancel = don't save yet (your changes stay on screen).`,
+        );
+        if (yours) return save(true);
+        setStatus({ kind: "error", text: "Not saved: someone else changed this page. Press Save to save yours over theirs, or close Design and reload the page to see theirs." });
+        return;
+      }
+      if (!res.ok) throw new Error(out.error ?? failText(res.status, "save"));
       designStore.markSaved(design);
       setStatus({ kind: "ok", text: "Saved. Visitors see it now." });
     } catch (err) {
-      setStatus({ kind: "error", text: (err as Error).message });
+      setStatus({ kind: "error", text: plainError(err, "save") });
     }
   };
   const defaultFormat = () => {
@@ -603,7 +622,28 @@ export function DesignEditor() {
     );
   }
 
-  if (access?.path === path && !access.canEdit) {
+  if (access?.path !== path) {
+    return (
+      <div className="pd-ui pd-bar">
+        <strong>Design</strong>
+        <span className="pd-msg">Checking that you can change this page…</span>
+        <span className="pd-grow" />
+        <button type="button" onClick={() => setActive(false)}>Done</button>
+      </div>
+    );
+  }
+  if (access.failed) {
+    return (
+      <div className="pd-ui pd-bar">
+        <strong>Design</strong>
+        <span className="pd-msg">{access.failed}</span>
+        <button type="button" className="pd-primary" onClick={() => setAccess(null)}>Try again</button>
+        <span className="pd-grow" />
+        <button type="button" onClick={() => setActive(false)}>Done</button>
+      </div>
+    );
+  }
+  if (!access.canEdit) {
     return (
       <div className="pd-ui pd-bar">
         <strong>Design</strong>
@@ -636,7 +676,7 @@ export function DesignEditor() {
         <span className="pd-grow" />
         {narrow && <span className="pd-msg pd-warn">Widen the window to at least 980px to move page pieces.</span>}
         {status.text && <span className={status.kind === "error" ? "pd-msg pd-err" : "pd-msg"}>{status.text}</span>}
-        <button type="button" className="pd-primary" data-pd-save="" disabled={!dirty || status.kind === "busy"} onClick={save} title="Save (Ctrl+S)">
+        <button type="button" className="pd-primary" data-pd-save="" disabled={!dirty || status.kind === "busy"} onClick={() => void save()} title="Save (Ctrl+S)">
           {dirty ? "Save" : "Saved"}
         </button>
         <button type="button" onClick={done}>Done</button>
