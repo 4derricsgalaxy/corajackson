@@ -333,11 +333,12 @@ body {
 .wix-person-solo [data-pd="fact-families"] { display: none; }
 
 /* ---- every person page is the same size on desktop: 980 x 857 (the standard page) ----
-   the top section is at least the standard 546px; the write-up is a fixed box under the portrait, a long Children list scrolls in its column, and a page with no Memories is padded to full height. */
+   the top section is at least the standard 546px; the write-up is a fixed box under the portrait, a long Children list scrolls in its column, and a page with no Memories is padded to full height.
+   The column is always the full 546px, so a Children list that is short but moved down with Design gets room instead of a scroll bar. */
 @media (min-width: 980px) {
   .wix-canvas.wix-person { min-height: 857px !important; }
   .wix-person-cols, .wix-person-cols:has(+ .wix-person-memories) { height: auto; min-height: 546px; }
-  .wix-person-right { max-height: 546px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+  .wix-person-right { height: 546px; max-height: 546px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
 }
 
 .wix-person-placeholder {
