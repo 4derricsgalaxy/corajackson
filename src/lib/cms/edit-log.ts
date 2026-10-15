@@ -39,6 +39,10 @@ function pacific(d: Date) {
   return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
 }
 
+/** Studio lists entries by `_order`: a rank that SHRINKS as time goes on, so the newest change is listed first.
+ *  13 digits, fixed width, so it sorts the same as text or as a number (good until the year 2286). */
+export const newestFirstRank = (ms: number) => "0" + String(1e13 - ms).padStart(13, "0");
+
 /** the `create` mutation that records this change, to send in the same batch as the change itself */
 export function logMutation(editor: EditorWrite, e: Entry) {
   const at = new Date();
@@ -50,6 +54,7 @@ export function logMutation(editor: EditorWrite, e: Entry) {
     by,
     tool: e.tool,
     entries: e.entries.join(", ").slice(0, 2000),
+    _order: newestFirstRank(at.getTime()),
   };
   if (e.page) data.page = e.page;
   if (e.detail) data.detail = e.detail.slice(0, 1000);
