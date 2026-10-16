@@ -306,6 +306,9 @@ export function designCss(design: Design): string {
     if (look.z !== undefined) out.push(`:where(${s}){position:relative}`);
     if (look.hidden) out.push(`html:not(.pd-editing) ${s}{visibility:hidden !important;pointer-events:none !important}`);
     if (geo.length) wide.push(`${s}{${geo.join(";")}}`);
+    // a move only shifts how a piece looks, so a footer moved up would leave its old space as blank page under it:
+    // pull the page's end up with it (only when it really is the last thing on the page)
+    if (key === "footer" && look.y && look.y < 0) wide.push(`${s}:last-child{margin-bottom:${look.y}px !important}`);
     if (look.w || look.h) wide.push(`${s}>img,${s}>span>img,${s}>a>img{width:100% !important;height:100% !important;max-width:none !important}`);
   }
   if (wide.length) out.push(`@media (min-width:980px){${wide.join("")}}`);
