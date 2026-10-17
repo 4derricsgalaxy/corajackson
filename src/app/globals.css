@@ -455,6 +455,66 @@ body {
 }
 .wix-person-kid:hover .wix-person-kid-name { text-decoration: underline; }
 
+/* ---- Children slots: edit mode, on pages the editor may change (person/ChildSlots.tsx) ----
+   one empty child slot ends each block (the next appears once it is saved), a dashed frame for a missing other-parent photo,
+   a pencil on each child. Visitors never see them, and none show while Design is open. */
+.kid-slot { position: relative; width: 99px; }
+.kid-slot-photo { display: block; width: 99px; height: 121px; padding: 0; border: 2px dashed #2f6fed; border-radius: 4px; background: #f3f6fd; cursor: pointer; overflow: hidden; }
+.kid-slot-photo:hover:not(:disabled) { background: #e6edfc; }
+.kid-slot-thumb, .partner-slot-thumb { display: flex; align-items: center; justify-content: center; box-sizing: border-box; width: 100%; height: 100%; padding: 4px; background: center 25% / cover no-repeat; font: 600 12px/1.25 system-ui, sans-serif; color: #1d4fc4; text-align: center; }
+.kid-slot-name { display: block; box-sizing: border-box; width: calc(100% + 16px); margin: 8px -8px 0; padding: 4px; border: 1px solid #9db6ee; border-radius: 4px; background: #fff; color: #111; font: 13px/1.2 system-ui, sans-serif; text-align: center; }
+.kid-slot button, .kid-tools button, .partner-slot, .partner-slot-change, .parent-slot-form button, .parent-slot-open, .block-slot-open, .block-slot-buttons button {
+  font: 600 12px/1.2 system-ui, sans-serif; border-radius: 5px; cursor: pointer;
+}
+.kid-slot-save, .kid-tools .kid-slot-save, .block-slot-buttons .kid-slot-save, .parent-slot-buttons .kid-slot-save { height: 26px; padding: 0 12px; border: 0; background: #2f6fed; color: #fff; }
+.kid-slot > .kid-slot-save { width: calc(100% + 16px); margin: 5px -8px 0; }
+.kid-slot-save:disabled { opacity: .5; cursor: default; }
+.kid-slot-error { display: block; margin-top: 4px; font: 12px/1.3 system-ui, sans-serif; color: #b42318; }
+.kid-slot > .kid-slot-error { width: calc(100% + 40px); margin-left: -20px; text-align: center; }
+.kid-slot-hint { font: 12px/1.3 system-ui, sans-serif; color: #555; }
+
+/* the pencil on a child already on the page, and its little menu */
+.wix-person-kids > li { position: relative; }
+.kid-tools { position: absolute; top: 3px; right: 3px; z-index: 3; }
+.kid-tools-open { width: 24px; height: 24px; padding: 0; border: 0; border-radius: 50%; background: #2f6fed; color: #fff; box-shadow: 0 1px 4px #0006; }
+.kid-tools-menu { position: absolute; top: 28px; right: 0; display: flex; flex-direction: column; gap: 6px; width: 190px; padding: 10px; border-radius: 8px; background: #fff; box-shadow: 0 6px 24px #0004; font: 12px/1.3 system-ui, sans-serif; color: #222; }
+.kid-tools-menu > button { height: 28px; border: 1px solid #c9d5f3; background: #f3f6fd; color: #1d4fc4; }
+.kid-tools-menu label { display: flex; flex-direction: column; gap: 3px; }
+.kid-tools-menu input { padding: 4px 6px; border: 1px solid #9db6ee; border-radius: 4px; font: 13px/1.2 system-ui, sans-serif; }
+.kid-tools-menu .kid-tools-remove, .parent-slot-buttons .kid-tools-remove { border: 1px solid #f1b7ae; background: #fff4f2; color: #b42318; }
+
+/* the other parent: a dashed frame where their photo goes, a Change chip on a photo, and the words */
+.partner-slot { position: absolute; left: 6px; top: 9px; width: 74px; height: 84px; padding: 0; border: 2px dashed #2f6fed; background: #f3f6fd; color: #1d4fc4; overflow: hidden; }
+.partner-slot-change { position: absolute; z-index: 2; left: 12px; top: 70px; width: 62px; height: 20px; padding: 0; border: 0; background: #2f6fedde; color: #fff; }
+.partner-slot-error { position: absolute; left: 0; top: 98px; width: 90px; }
+.parent-slot-open { margin: 4px 0 0; height: 22px; padding: 0 8px; border: 1px dashed #2f6fed; background: #f3f6fd; color: #1d4fc4; }
+.parent-slot-form { display: flex; flex-direction: column; gap: 6px; max-width: 330px; margin: 6px 0 4px; }
+.parent-slot-fields { display: flex; flex-direction: column; gap: 5px; max-width: 330px; }
+.parent-slot-fields select, .parent-slot-fields input { box-sizing: border-box; width: 100%; padding: 4px 6px; border: 1px solid #9db6ee; border-radius: 4px; background: #fff; color: #111; font: 13px/1.2 system-ui, sans-serif; }
+.parent-slot-buttons, .block-slot-buttons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.parent-slot-buttons button:not(.kid-slot-save), .block-slot-buttons button:not(.kid-slot-save) { height: 26px; padding: 0 10px; border: 1px solid #c9d5f3; background: #fff; color: #1d4fc4; }
+
+/* a new block (another parent + first child), and the folded "+ Children with another parent" line */
+.block-slot { padding-top: 10px; }
+.block-slot-note { margin-bottom: 4px; }
+.block-slot-buttons { margin: 10px 0 0 94px; }
+.block-slot-open { display: block; margin: 10px 0 0 94px; height: 30px; padding: 0 14px; border: 2px dashed #2f6fed; background: #f3f6fdcc; color: #1d4fc4; }
+.block-slot-open:hover, .parent-slot-open:hover { background: #e6edfc; }
+
+/* "+ Add children" on a page with none yet: above "Add photos" */
+.pd-ui.children-add-launch { position: fixed; z-index: 2147483000; right: 16px; bottom: 112px; height: 40px; padding: 0 16px; border-radius: 8px; border: 0; background: #12805c; color: #fff; font-weight: 600; box-shadow: 0 4px 16px #0004; cursor: pointer; }
+.pd-ui.children-add-launch:hover { background: #0e6a4c; }
+
+html.pd-editing .kid-slot, html.pd-editing .kid-tools, html.pd-editing .partner-slot, html.pd-editing .partner-slot-change, html.pd-editing .partner-slot-error,
+html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-editing .block-slot-open, html.pd-editing .block-slot, html.pd-editing .children-add-launch { display: none !important; }
+
+@media (max-width: 979px) {
+  .partner-slot { position: static; display: block; margin: 8px 0 12px; }
+  .partner-slot-change { left: 6px; top: 66px; }
+  .partner-slot-error { position: static; width: auto; }
+  .block-slot-buttons, .block-slot-open { margin-left: 0; }
+}
+
 /* ---- memories ---- */
 .wix-person-cols:has(+ .wix-person-memories) { min-height: 546px; }
 .wix-person-memories { margin-top: 2px; }

@@ -9,11 +9,14 @@ import { WixCanvas } from "@/components/wix/WixCanvas";
 import { FooterLabel, PageNav } from "@/components/wix/WixNav";
 import { PhotoSlider, type SliderPhoto } from "@/components/wix/PhotoSlider";
 import { PhotoDrop } from "@/components/photos/PhotoDrop";
+import { ChildrenStart } from "@/components/wix/person/ChildSlots";
 import { PersonChildren } from "@/components/wix/person/PersonChildren";
 import { PersonFacts } from "@/components/wix/person/PersonFacts";
 import { PersonPortrait } from "@/components/wix/person/PersonPortrait";
 import { firstName } from "@/components/wix/person/parent-note";
 import { PROJECT } from "@/lib/cms/client";
+import { childrenAddedOn } from "@/lib/cms/edit-log";
+import { editorForPage } from "@/lib/cms/page-access";
 import { editableField, editablePage } from "@/lib/cms/sdk";
 import { cropStyle } from "@/lib/content/crop";
 import { fullSrc } from "@/lib/content/image";
@@ -58,6 +61,12 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const person = graph.bySlug.get(slug);
   if (!person) notFound();
   const editing = (await draftMode()).isEnabled;
+  const path = `/family/${person.slug}`;
+  // edit mode, on a page this editor may change (their own, their children's; owners every page): the Children slots
+  const editor = editing ? await editorForPage(path) : null;
+  const slotted = Boolean(editor);
+  // no children and no "Children on this page" list: the solo page (the slots' "Add children" button turns it standard)
+  const solo = person.children.length === 0 && !person.families?.length;
 
   // Memories: the member's own gallery, photos tagged with them, and (for Cora and her children) the photos in their
   // line's album that nobody is tagged in. A line photo tagged with someone else belongs on that person's page only.
@@ -74,6 +83,16 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   tagged.forEach((p) => add(p._id, p.image, { docId: p._id, field: "" }, p.caption || p.title || undefined));
 
   const personStories = stories.filter((s) => s.authorId === person._id || s.peopleIds?.includes(person._id));
+  // a child the slots may take off the page again: one added here with the slots (Edit log), whose entry holds nothing of its own yet
+  const addedHere = editor ? await childrenAddedOn(editor, path) : new Set<string>();
+  const removable = new Set(
+    slotted
+      ? person.children
+          .filter((c) => addedHere.has(c._id) && !c.children.length && !c.families?.length && !c.bio && !c.shortBio && !c.gallery?.length)
+          .filter((c) => !photos.some((p) => p.peopleIds?.includes(c._id)) && !stories.some((s) => s.authorId === c._id || s.peopleIds?.includes(c._id)))
+          .map((c) => c._id)
+      : [],
+  );
 
   // The floating tab in the gray surround links UP one level ("Home" for Cora and her children).
   const parent = person.parentId ? graph.byId.get(person.parentId) : undefined;
@@ -82,7 +101,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
 
   const t = pd();
   // captions (labels, headings, buttons, child names) can be re-worded per page with the Design tool
-  const design = (await getDesign(`/family/${person.slug}`))?.items;
+  const design = (await getDesign(path))?.items;
   const w = pdWords(design);
   const hasBio = Array.isArray(person.bio) ? person.bio.length > 0 : Boolean(person.bio);
   // One standard write-up column on every page: exactly as wide as the portrait above it.
@@ -102,10 +121,11 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
       <Link href={up.href} className="wix-side-tab wix-person-side-tab" {...w("side-tab", up.label, "Side tab")} />
       {/* edit mode: drop photos anywhere on the page (or press Add photos) to add them to this person's Memories */}
       {editing && <PhotoDrop target={{ kind: "person", id: person._id, name: person.title, first: firstName(person) }} />}
+      {slotted && solo && <ChildrenStart path={path} first={firstName(person)} />}
 
-      <WixCanvas path={`/family/${person.slug}`} minHeight={560} className="wix-person">
+      <WixCanvas path={path} minHeight={560} className="wix-person">
         {/* no children: the standard "solo" page modeled on Emrick's (big portrait toward the middle, no Children column) */}
-        <article className={clsx("wix-person-body", person.children.length === 0 && "wix-person-solo")}>
+        <article className={clsx("wix-person-body", solo && "wix-person-solo")}>
           {/* page art: the member's own Page background if the CMS has one, else none. In edit mode an empty page still
               gets an invisible full-page target, so clicking the background opens the Page background field to add one. */}
           {person.heroImage ? (
@@ -130,7 +150,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
               {/* portrait + facts float; the quote sits under the portrait and wraps around a tall fact column */}
               <div className="wix-person-bio" {...t("bio-block", quoteStyle(settings), "Portrait, facts and write-up")}>
                 <div className="wix-person-portrait" {...editableField(person._id, "portrait")} {...t("portrait")}>
-                  <PersonPortrait image={person.portrait} name={person.title} width={person.children.length === 0 ? 243 : 160} height={person.children.length === 0 ? 327 : 215} priority />
+                  <PersonPortrait image={person.portrait} name={person.title} width={solo ? 243 : 160} height={solo ? 327 : 215} priority />
                 </div>
                 <PersonFacts person={person} editing={editing} design={design} />
                 {hasBio ? (
@@ -146,7 +166,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
             </div>
 
             <div className="wix-person-right" {...t("children")}>
-              <PersonChildren person={person} byId={graph.byId} assets={assets} design={design} />
+              <PersonChildren person={person} byId={graph.byId} assets={assets} design={design} slots={slotted ? { path, removable } : undefined} />
             </div>
           </div>
 

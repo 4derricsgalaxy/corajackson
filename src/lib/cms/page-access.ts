@@ -1,4 +1,6 @@
+import { NextResponse } from "next/server";
 import { getFamilyGraph } from "@/lib/content/queries";
+import { requireEditor, type EditorWrite } from "./editor-auth";
 
 // Which pages a signed-in editor may change with the on-page tools (Design, Crop, Add photos).
 // Snackbox owners and team members: every page. A "Family member": their own /family/<slug> page and their
@@ -65,6 +67,17 @@ export async function pageAccess(email: string | undefined): Promise<Access> {
 export const mayChange = (access: Access, path: string) => access.all || access.pages.includes(path);
 /** may change things that belong to this Family Members entry (its page, photos tagged with it, its album) */
 export const mayChangeFor = (access: Access, memberId: string) => access.all || access.ids.includes(memberId);
+
+/** For a page being rendered in edit mode: the signed-in editor, when they may change this page; else null. */
+export async function editorForPage(path: string): Promise<EditorWrite | null> {
+  const editor = await requireEditor("changes");
+  if (editor instanceof NextResponse) return null;
+  try {
+    return mayChange(await pageAccess(editor.email), path) ? editor : null;
+  } catch {
+    return null;
+  }
+}
 
 /** the refusal a family member gets for someone else's page */
 export function notYours(access: Access) {

@@ -64,3 +64,17 @@ export function logMutation(editor: EditorWrite, e: Entry) {
 
 /** the `actor` Snackbox stores with a change: who made it, with which tool */
 export const actorFor = (editor: EditorWrite, tool: string) => `${editor.email ?? "unknown"} (${tool}, website)`;
+
+/** the children added with the Children slots on this page (from the Edit log): the only ones the slots may delete again */
+export async function childrenAddedOn(editor: EditorWrite, page: string): Promise<Set<string>> {
+  const q = { type: EDIT_LOG_TYPE, filters: [{ op: "eq", path: "tool", value: "Children" }, { op: "eq", path: "page", value: page }], limit: 200 };
+  const res = await fetch(`${editor.api}/query?q=${encodeURIComponent(JSON.stringify(q))}`, { headers: editor.auth, cache: "no-store" }).catch(() => null);
+  const json = res?.ok ? ((await res.json().catch(() => null)) as { result?: { detail?: string; entries?: string }[] } | null) : null;
+  const ids = new Set<string>();
+  for (const row of json?.result ?? []) {
+    if (!row.detail?.startsWith("Added ")) continue;
+    // "member-lamont, member-testy-couch": the page's own entry, then the child it added
+    for (const id of (row.entries ?? "").split(",").slice(1)) if (id.trim()) ids.add(id.trim());
+  }
+  return ids;
+}
