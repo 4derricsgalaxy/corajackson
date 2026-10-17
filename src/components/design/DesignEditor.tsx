@@ -12,7 +12,8 @@ import { failText, plainError, sendForm, sendJson } from "@/lib/net";
 
 /**
  * The on-page Design tool (edit mode only). "Design" turns it on for the page you are on:
- * - click anything to select it (the page's own pieces and things you added); drag to move, handles resize
+ * - click anything to select it (the page's own pieces and things you added); drag to move, handles resize;
+ *   Ctrl+click selects more things, which then move, copy and delete together
  * - the side panel changes font, size, bold/italic/underline, colors, fill, border, corners, shadow,
  *   see-through, turn, layer order, exact position and size; Crop for pictures
  * - Cut / Copy / Paste / Duplicate / Delete (also Ctrl+X/C/V/D, Delete); copies can be pasted on any page
@@ -145,9 +146,15 @@ export function DesignEditor() {
   const [, force] = useState(0);
   const overlay = useRef<HTMLDivElement>(null);
   const selRef = useRef<Sel>(null);
+  // Ctrl+click adds more things to the selection: they move (drag / arrows), copy and delete together with `sel`
+  const [more, setMore] = useState<Sel[]>([]);
+  const moreRef = useRef<Sel[]>([]);
+  const extraFrames = useRef<HTMLDivElement>(null);
   const drag = useRef<null | {
     pointerId: number; sx: number; sy: number; moved: boolean; sel: Sel; mode: "move" | Handle;
     x0: number; y0: number; w0: number; h0: number; k: number; ratio: number; clickTarget?: Element | null;
+    /** the other selected things moving along (start positions) */
+    others: { sel: Sel; x0: number; y0: number }[];
   }>(null);
   const dirty = isDirty(s);
   const path = s.path;
@@ -155,6 +162,16 @@ export function DesignEditor() {
   useEffect(() => {
     selRef.current = sel;
   }, [sel]);
+
+  /** select one thing (and optionally more besides it); every plain selection drops the Ctrl+click extras */
+  const select = useCallback((s: Sel, extra: Sel[] = []) => {
+    setSel(s);
+    selRef.current = s;
+    setMore(extra);
+    moreRef.current = extra;
+  }, []);
+  /** everything selected, main thing first (never the page) */
+  const group = useCallback(() => [selRef.current, ...moreRef.current].filter((x): x is Exclude<Sel, null | { kind: "page" }> => Boolean(x) && x!.kind !== "page"), []);
 
   const commit = useCallback((d: Design) => designStore.commit(d), []);
   const apply = useCallback((patch: Partial<Added>, mode: "commit" | "live" = "commit") => {
@@ -233,6 +250,16 @@ export function DesignEditor() {
           box.style.height = `${r.height}px`;
         } else box.style.display = "none";
       }
+      // one thinner frame per Ctrl+click extra (rendered in the same order as moreRef)
+      const frames = extraFrames.current?.children;
+      if (frames) {
+        for (let i = 0; i < frames.length; i++) {
+          const f = frames[i] as HTMLElement;
+          const r = selEl(moreRef.current[i] ?? null)?.getBoundingClientRect();
+          f.style.display = r ? "block" : "none";
+          if (r) Object.assign(f.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+        }
+      }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -240,27 +267,47 @@ export function DesignEditor() {
   }, [active]);
 
   /* ---------- clipboard actions ---------- */
-  const copySel = useCallback((cut: boolean) => {
-    const cur = selRef.current;
+  /** each selected thing as an added item (page pieces as frozen copies), in selection order */
+  const asItems = useCallback(() => {
     const d = designStore.get().design;
     const canvas = canvasEl();
-    if (!cur || cur.kind === "page" || !canvas) return;
-    if (cur.kind === "added") {
-      const a = d.added.find((x) => x.id === cur.id);
-      if (!a) return;
-      writeClip(path, [a]);
-      if (cut) {
-        commit({ ...d, added: d.added.filter((x) => x.id !== a.id) });
-        setSel(null);
-      }
-    } else {
+    if (!canvas) return [];
+    return group().flatMap((cur): Added[] => {
+      if (cur.kind === "added") return d.added.filter((x) => x.id === cur.id);
       const el = pieceEl(cur.key);
-      if (!el) return;
-      writeClip(path, [snapshot(el, canvas, designStore.get().baseW, pieceLabel(el, cur.key))]);
-      if (cut) commit(withLook(d, cur, { hidden: true }));
-    }
-    setStatus({ kind: "ok", text: cut ? "Cut. Paste it here or on any page." : "Copied. Paste it here or on any page." });
-  }, [commit, path]);
+      return el ? [snapshot(el, canvas, designStore.get().baseW, pieceLabel(el, cur.key))] : [];
+    });
+  }, [group]);
+
+  /** cut / delete: added things go away, page pieces are hidden (they can be shown again from Page) */
+  const dropSelected = useCallback(() => {
+    const all = group();
+    if (!all.length) return;
+    let d = designStore.get().design;
+    const gone = new Set(all.flatMap((x) => (x.kind === "added" ? [x.id] : [])));
+    d = { ...d, added: d.added.filter((x) => !gone.has(x.id)) };
+    for (const x of all) if (x.kind === "piece") d = withLook(d, x, { hidden: true });
+    commit(d);
+    if (gone.size) select(null);
+  }, [commit, group, select]);
+
+  const copySel = useCallback((cut: boolean) => {
+    const items = asItems();
+    if (!items.length) return;
+    writeClip(path, items);
+    if (cut) dropSelected();
+    const it = items.length > 1 ? "them" : "it";
+    setStatus({ kind: "ok", text: cut ? `Cut. Paste ${it} here or on any page.` : `Copied. Paste ${it} here or on any page.` });
+  }, [asItems, dropSelected, path]);
+
+  /** put items on the page as new added things and select them all */
+  const place = useCallback((list: Added[], offset: number) => {
+    const d = designStore.get().design;
+    const items = list.map((a) => ({ ...a, id: newId(), x: a.x + offset, y: a.y + offset }));
+    commit({ ...d, added: [...d.added, ...items] });
+    const sels: Sel[] = items.map((a) => ({ kind: "added", id: a.id }));
+    select(sels[sels.length - 1], sels.slice(0, -1));
+  }, [commit, select]);
 
   const paste = useCallback(() => {
     const clip = readClip();
@@ -268,46 +315,16 @@ export function DesignEditor() {
       setStatus({ kind: "error", text: "Nothing copied yet." });
       return;
     }
-    const d = designStore.get().design;
-    const same = clip.from === path;
-    const items = clip.items.map((a) => ({ ...a, id: newId(), x: a.x + (same ? 20 : 0), y: a.y + (same ? 20 : 0) }));
-    commit({ ...d, added: [...d.added, ...items] });
-    setSel({ kind: "added", id: items[items.length - 1].id });
+    place(clip.items, clip.from === path ? 20 : 0);
     setStatus({ kind: "idle" });
-  }, [commit, path]);
+  }, [path, place]);
 
   const duplicate = useCallback(() => {
-    const cur = selRef.current;
-    const d = designStore.get().design;
-    const canvas = canvasEl();
-    if (!cur || cur.kind === "page" || !canvas) return;
-    let item: Added | undefined;
-    if (cur.kind === "added") {
-      const a = d.added.find((x) => x.id === cur.id);
-      if (a) item = { ...a, id: newId(), x: a.x + 20, y: a.y + 20 };
-    } else {
-      const el = pieceEl(cur.key);
-      if (el) {
-        const snap = snapshot(el, canvas, designStore.get().baseW, pieceLabel(el, cur.key));
-        item = { ...snap, x: snap.x + 20, y: snap.y + 20 };
-      }
-    }
-    if (!item) return;
-    commit({ ...d, added: [...d.added, item] });
-    setSel({ kind: "added", id: item.id });
-  }, [commit]);
+    const items = asItems();
+    if (items.length) place(items, 20);
+  }, [asItems, place]);
 
-  const remove = useCallback(() => {
-    const cur = selRef.current;
-    const d = designStore.get().design;
-    if (!cur || cur.kind === "page") return;
-    if (cur.kind === "added") {
-      commit({ ...d, added: d.added.filter((x) => x.id !== cur.id) });
-      setSel(null);
-    } else {
-      commit(withLook(d, cur, { hidden: true }));
-    }
-  }, [commit]);
+  const remove = dropSelected;
 
   /* ---------- pointer + keyboard on the page ---------- */
   useEffect(() => {
@@ -328,24 +345,49 @@ export function DesignEditor() {
       return { kind: "piece", key: el.getAttribute("data-pd")! };
     };
 
+    const startPos = (target: Sel) => {
+      const { design } = designStore.get();
+      if (target?.kind === "added") {
+        const a = design.added.find((x) => x.id === target.id);
+        return a ? { x0: a.x, y0: a.y } : null;
+      }
+      const look = target?.kind === "piece" ? design.items[target.key] ?? {} : {};
+      return { x0: look.x ?? 0, y0: look.y ?? 0 };
+    };
+    const sameSel = (a: Sel, b: Sel) => JSON.stringify(a) === JSON.stringify(b);
+
     const startDrag = (e: PointerEvent, target: Sel, mode: "move" | Handle, clickTarget?: Element | null) => {
       const el = selEl(target);
       const canvas = canvasEl();
-      if (!el || !canvas) return;
+      const pos = startPos(target);
+      if (!el || !canvas || !pos) return;
       const { design, baseW } = designStore.get();
       const r = el.getBoundingClientRect();
       const k = canvas.getBoundingClientRect().width / baseW || 1;
-      let x0 = 0, y0 = 0, w0 = r.width, h0 = r.height;
-      if (target?.kind === "added") {
-        const a = design.added.find((x) => x.id === target.id);
-        if (!a) return;
-        ({ x: x0, y: y0, w: w0, h: h0 } = a);
-      } else if (target?.kind === "piece") {
-        const look = design.items[target.key] ?? {};
-        x0 = look.x ?? 0;
-        y0 = look.y ?? 0;
+      let { x0, y0 } = pos, w0 = r.width, h0 = r.height;
+      if (target?.kind === "added") ({ x: x0, y: y0, w: w0, h: h0 } = design.added.find((x) => x.id === target.id)!);
+      // moving one of several selected things moves them all (resizing is for one thing at a time)
+      const others = mode !== "move" ? [] : group().filter((x) => !sameSel(x, target)).flatMap((x) => {
+        const p = startPos(x);
+        return p ? [{ sel: x as Sel, ...p }] : [];
+      });
+      drag.current = { pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, sel: target, mode, x0, y0, w0, h0, k, ratio: w0 / Math.max(1, h0), clickTarget, others };
+    };
+
+    /** Ctrl+click: add the thing to the selection, or take it out if it is already in */
+    const toggle = (el: HTMLElement) => {
+      const next = selOf(el);
+      const cur = selRef.current;
+      if (!cur || cur.kind === "page") return select(next);
+      const all = group();
+      if (all.some((x) => sameSel(x, next))) {
+        const rest = all.filter((x) => !sameSel(x, next));
+        return select(rest[0] ?? null, rest.slice(1));
       }
-      drag.current = { pointerId: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false, sel: target, mode, x0, y0, w0, h0, k, ratio: w0 / Math.max(1, h0), clickTarget };
+      // a thing inside a selected piece already moves with it; a piece holding selected things takes their place
+      if (all.some((x) => selEl(x)?.contains(el))) return;
+      const kept = all.filter((x) => !el.contains(selEl(x)));
+      select(kept[0] ?? next, kept.length ? [...kept.slice(1), next] : []);
     };
 
     const onDown = (e: PointerEvent) => {
@@ -363,22 +405,25 @@ export function DesignEditor() {
       // (the picture under the pointer: a thumbnail's click lands on its button, not on the <img> itself)
       setPicked(document.elementsFromPoint(e.clientX, e.clientY).find((n): n is HTMLImageElement => n instanceof HTMLImageElement) ?? null);
       const el = hit(e.target);
-      const cur = selRef.current;
-      const curEl = selEl(cur);
-      // pressing inside the selected thing drags it; a click without moving then picks what is under the pointer
-      if (cur && cur.kind !== "page" && curEl && e.target instanceof Node && curEl.contains(e.target)) {
-        startDrag(e, cur, "move", el);
+      if (e.ctrlKey || e.metaKey) {
+        if (el) toggle(el);
+        return;
+      }
+      // pressing inside a selected thing drags it (and everything selected with it); a click without moving
+      // then picks just what is under the pointer
+      const holder = group().find((x) => e.target instanceof Node && selEl(x)?.contains(e.target));
+      if (holder) {
+        startDrag(e, holder, "move", el);
         return;
       }
       if (el) {
         const next = selOf(el);
-        setSel(next);
-        selRef.current = next;
+        select(next);
         startDrag(e, next, "move");
         return;
       }
       const canvas = canvasEl();
-      setSel(canvas && e.target instanceof Node && canvas.contains(e.target) ? { kind: "page" } : null);
+      select(canvas && e.target instanceof Node && canvas.contains(e.target) ? { kind: "page" } : null);
     };
 
     const onMove = (e: PointerEvent) => {
@@ -405,8 +450,13 @@ export function DesignEditor() {
       const added = d.sel?.kind === "added";
       const kx = added ? d.k : 1; // added things are placed in page px; page pieces move in screen px
       if (d.mode === "move") {
-        const patch = { x: Math.round(d.x0 + dx / kx), y: Math.round(d.y0 + dy) };
-        designStore.live(withLook(designStore.get().design, d.sel, added ? patch : { x: patch.x || undefined, y: patch.y || undefined }));
+        let next = designStore.get().design;
+        for (const m of [{ sel: d.sel, x0: d.x0, y0: d.y0 }, ...d.others]) {
+          const isAdded = m.sel?.kind === "added";
+          const patch = { x: Math.round(m.x0 + dx / (isAdded ? d.k : 1)), y: Math.round(m.y0 + dy) };
+          next = withLook(next, m.sel, isAdded ? patch : { x: patch.x || undefined, y: patch.y || undefined });
+        }
+        designStore.live(next);
         return;
       }
       const east = d.mode.includes("e"), west = d.mode.includes("w"), south = d.mode.includes("s"), north = d.mode.includes("n");
@@ -436,8 +486,7 @@ export function DesignEditor() {
       if (!d || e.pointerId !== d.pointerId) return;
       drag.current = null;
       if (!d.moved && d.clickTarget) {
-        const next = selOf(d.clickTarget as HTMLElement);
-        setSel(next);
+        select(selOf(d.clickTarget as HTMLElement));
       }
     };
 
@@ -464,20 +513,23 @@ export function DesignEditor() {
       if (mod && k === "d") { duplicate(); e.preventDefault(); return; }
       if (mod && k === "s") { document.querySelector<HTMLButtonElement>(".pd-ui [data-pd-save]")?.click(); e.preventDefault(); return; }
       if (e.key === "Delete" || e.key === "Backspace") { remove(); e.preventDefault(); return; }
-      if (e.key === "Escape") { setSel(null); return; }
+      if (e.key === "Escape") { select(null); return; }
       const step = e.shiftKey ? 10 : 1;
       const delta = { arrowleft: [-step, 0], arrowright: [step, 0], arrowup: [0, -step], arrowdown: [0, step] }[k];
-      const cur = selRef.current;
-      if (!delta || !cur || cur.kind === "page") return;
+      const all = group();
+      if (!delta || !all.length) return;
       e.preventDefault();
-      const d = designStore.get().design;
-      if (cur.kind === "added") {
-        const a = d.added.find((x) => x.id === cur.id);
-        if (a) commit(withLook(d, cur, { x: a.x + delta[0], y: a.y + delta[1] }));
-      } else {
-        const look = d.items[cur.key] ?? {};
-        commit(withLook(d, cur, { x: (look.x ?? 0) + delta[0] || undefined, y: (look.y ?? 0) + delta[1] || undefined }));
+      let d = designStore.get().design;
+      for (const cur of all) {
+        if (cur.kind === "added") {
+          const a = d.added.find((x) => x.id === cur.id);
+          if (a) d = withLook(d, cur, { x: a.x + delta[0], y: a.y + delta[1] });
+        } else {
+          const look = d.items[cur.key] ?? {};
+          d = withLook(d, cur, { x: (look.x ?? 0) + delta[0] || undefined, y: (look.y ?? 0) + delta[1] || undefined });
+        }
       }
+      commit(d);
     };
     // Ctrl+V: a picture copied from anywhere is uploaded and placed; else the Design tool's own clipboard
     const onPaste = (e: ClipboardEvent) => {
@@ -515,7 +567,7 @@ export function DesignEditor() {
     };
     // addPicture is stable enough (reads the store); listing it would re-bind every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, commit, copySel, duplicate, paste, remove]);
+  }, [active, commit, copySel, duplicate, paste, remove, group, select]);
 
   /* ---------- adding things ---------- */
   // new things land in the middle of the part of the page you are looking at
@@ -531,7 +583,7 @@ export function DesignEditor() {
     const pos = spot(item.w, item.h);
     const a = { ...pos, ...item, id: newId() } as Added;
     commit({ ...designStore.get().design, added: [...designStore.get().design.added, a] });
-    setSel({ kind: "added", id: a.id });
+    select({ kind: "added", id: a.id });
   };
   const addText = () => addThing({ kind: "text", layer: "front", w: 320, h: 60, text: "Your text here", size: 22, color: "#292f33", font: "Proxima Nova" });
   const addShape = (shape: "box" | "circle" | "line") =>
@@ -596,19 +648,19 @@ export function DesignEditor() {
   const defaultFormat = () => {
     if (!window.confirm("Put this page back to its default format?\n\nEvery move, size, font, color and background change is undone and the things you added are removed. Nothing is public until you press Save, and Undo brings it all back.")) return;
     commit(emptyDesign());
-    setSel(null);
+    select(null);
   };
   const done = () => {
     if (isDirty(designStore.get()) && !window.confirm("You have changes that are not saved. Close the Design tool and throw them away?")) return;
     if (isDirty(designStore.get())) designStore.discard();
-    setSel(null);
+    select(null);
     setModal(null);
     setActive(false);
   };
   const editInSnackbox = () => {
     const el = selEl(selRef.current);
     const field = el?.matches("[data-sbx-field]") ? el : el?.querySelector<HTMLElement>("[data-sbx-field]") ?? el?.closest<HTMLElement>("[data-sbx-field]");
-    setSel(null);
+    select(null);
     setActive(false); // unsaved design changes stay on the page; open Design again to save them
     if (field) window.setTimeout(() => field.click(), 80);
   };
@@ -684,7 +736,7 @@ export function DesignEditor() {
         <button type="button" onClick={duplicate} disabled={!sel || sel.kind === "page"} title="Duplicate (Ctrl+D)">Duplicate</button>
         <button type="button" onClick={remove} disabled={!sel || sel.kind === "page"} title="Delete">Delete</button>
         <span className="pd-sep" />
-        <button type="button" onClick={() => setSel({ kind: "page" })} aria-pressed={sel?.kind === "page"}>Page</button>
+        <button type="button" onClick={() => select({ kind: "page" })} aria-pressed={sel?.kind === "page"}>Page</button>
         <span className="pd-grow" />
         {narrow && <span className="pd-msg pd-warn">Widen the window to at least 980px to move page pieces.</span>}
         {status.text && <span className={status.kind === "error" ? "pd-msg pd-err" : "pd-msg"}>{status.text}</span>}
@@ -695,17 +747,25 @@ export function DesignEditor() {
       </div>
 
       <div ref={overlay} className="pd-ui pd-frame" aria-hidden>
-        {sel?.kind !== "page" && HANDLES.map((h) => <span key={h} className={`pd-handle pd-h-${h}`} data-pd-handle={h} />)}
+        {sel?.kind !== "page" && !more.length && HANDLES.map((h) => <span key={h} className={`pd-handle pd-h-${h}`} data-pd-handle={h} />)}
+      </div>
+      <div ref={extraFrames} aria-hidden>
+        {more.map((m, i) => <div key={i} className="pd-ui pd-frame pd-frame-extra" />)}
       </div>
 
       <aside className={panelLeft ? "pd-ui pd-panel pd-panel-left" : "pd-ui pd-panel"} aria-label="Design settings">
         <div className="pd-panel-top">
           <button type="button" className="pd-mini" onClick={() => setPanelLeft((v) => !v)} title="Move this panel to the other side">⇆</button>
         </div>
+        {more.length > 0 && (
+          <p className="pd-hint pd-multi">
+            <strong>{more.length + 1} things selected.</strong> Drag any of them or use the arrow keys to move them together; Copy, Cut, Duplicate and Delete work on all of them. The settings below change only the one with the solid outline. Ctrl+click a selected thing to take it out.
+          </p>
+        )}
         {sel?.kind === "page" || !sel ? (
-          <PagePanel personPage={/^\/family\/[^/]+$/.test(path ?? "")} design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onPersonPicture={() => setModal({ kind: "picture", purpose: "person-bg" })} onPersonBackground={personBackground} bgPrevious={bgPrevious} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); setSel({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
+          <PagePanel personPage={/^\/family\/[^/]+$/.test(path ?? "")} design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onPersonPicture={() => setModal({ kind: "picture", purpose: "person-bg" })} onPersonBackground={personBackground} bgPrevious={bgPrevious} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); select({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
         ) : (
-          <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} picked={picked} design={s.design} apply={apply} commit={commit} setSel={setSel} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} />
+          <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} picked={picked} design={s.design} apply={apply} commit={commit} setSel={select} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} />
         )}
       </aside>
 
@@ -961,7 +1021,7 @@ function PagePanel({ personPage, design, commit, onPicture, onPersonPicture, onP
     <div className="pd-sections">
       <div className="pd-head">
         <strong>{selected ? "This page" : "Nothing selected"}</strong>
-        {!selected && <span className="pd-hint">Click anything on the page to change it. Drag to move it, pull a corner to resize. Empty space selects the page.</span>}
+        {!selected && <span className="pd-hint">Click anything on the page to change it. Drag to move it, pull a corner to resize. Ctrl+click to select several and move them together. Empty space selects the page.</span>}
       </div>
       <details open className="pd-sec">
         <summary>Background</summary>
