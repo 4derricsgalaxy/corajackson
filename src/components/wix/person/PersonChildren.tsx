@@ -110,6 +110,13 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
   if (!shown.length) return null;
 
   const plain = (v?: string | null) => stegaClean(v ?? "") as string;
+  // the groups a child can be moved to: "Mother: Tacia Bond", or "Group 2 (no other parent named)"
+  const groups = blocks.flatMap((b, i) => {
+    if (!b.family) return [];
+    const name = plain(b.family.name);
+    const role = plain(b.family.role);
+    return [{ key: b.family.key, label: name ? `${role ? `${role}: ` : ""}${name}` : `Group ${i + 1} (no other parent named)` }];
+  });
 
   return (
     <section className="wix-person-children" aria-labelledby="wix-person-children-h">
@@ -158,7 +165,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                         <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")} {...w(`kid-${keyPart(child._id)}`, firstName(child), `Child name: ${firstName(child)}`)} />
                       </Link>
                       {slot && listed && (
-                        <KidTools path={slot.path} child={child._id} name={plain(child.title)} hasPagePhoto={Boolean(pagePhoto)} removable={slots!.removable.has(child._id)} follow={`kidphoto-${keyPart(child._id)}`} />
+                        <KidTools path={slot.path} child={child._id} name={plain(child.title)} hasPagePhoto={Boolean(pagePhoto)} removable={slots!.removable.has(child._id)} follow={`kidphoto-${keyPart(child._id)}`} block={slot.key} groups={groups} />
                       )}
                     </li>
                   ))}

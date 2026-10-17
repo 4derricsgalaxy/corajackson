@@ -177,9 +177,15 @@ export function KidSlot({ path, block, first }: { path: string; block: string; f
 }
 
 /** the ✎ on a child already on the page: their photo here, their name, or (if added by mistake) take them off */
-export function KidTools({ path, child, name, hasPagePhoto, removable, follow }: { path: string; child: string; name: string; hasPagePhoto: boolean; removable: boolean; follow?: string }) {
+export function KidTools({ path, child, name, hasPagePhoto, removable, follow, block, groups }: {
+  path: string; child: string; name: string; hasPagePhoto: boolean; removable: boolean; follow?: string;
+  /** the group (other parent) they are in now, and every group on the page, for "Move to" */
+  block: string; groups: { key: string; label: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(name);
+  const others = groups.filter((g) => g.key !== block);
+  const [moveTo, setMoveTo] = useState(others[0]?.key ?? "new");
   const save = useSave();
   const box = useRef<HTMLSpanElement>(null);
   const done = (ok: boolean) => { if (ok) setOpen(false); };
@@ -222,6 +228,16 @@ export function KidTools({ path, child, name, hasPagePhoto, removable, follow }:
             onClick={() => void save.run(() => send(path, "child-name", { child, childName: text.trim() }, "rename this child")).then(done)}
           >
             Save name
+          </button>
+          <label>
+            Move to
+            <select value={moveTo} onChange={(e) => setMoveTo(e.target.value)} disabled={save.busy}>
+              {others.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+              <option value="new">A new group (a different other parent)</option>
+            </select>
+          </label>
+          <button type="button" disabled={save.busy} onClick={() => void save.run(() => send(path, "child-move", { child, block: moveTo }, "move this child")).then(done)}>
+            Move {name.split(" ")[0]}
           </button>
           {removable && (
             <button
@@ -459,23 +475,30 @@ export function ChildrenFit() {
       }
     };
     let frame = 0;
+    const sizes = new ResizeObserver(() => later());
     const later = () => {
       cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(fit);
+      frame = requestAnimationFrame(() => {
+        // (again each time: a group added or moved after the page loaded is a new element to watch)
+        const list = document.querySelector(".wix-person-children");
+        if (list) for (const child of Array.from(list.children)) sizes.observe(child);
+        fit();
+      });
     };
     later();
-    const sizes = new ResizeObserver(later);
-    const list = document.querySelector(".wix-person-children");
-    if (list) for (const child of Array.from(list.children)) sizes.observe(child);
-    // Design opening or closing, and the page's design styles arriving after load
+    // Design opening or closing, the page's design styles arriving after load, and groups added, moved or removed
     const design = new MutationObserver(later);
     design.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    const groups = new MutationObserver(later);
+    const listEl = document.querySelector(".wix-person-children");
+    if (listEl) groups.observe(listEl, { childList: true, subtree: true });
     window.addEventListener("resize", later);
     window.addEventListener("load", later);
     return () => {
       cancelAnimationFrame(frame);
       sizes.disconnect();
       design.disconnect();
+      groups.disconnect();
       window.removeEventListener("resize", later);
       window.removeEventListener("load", later);
       const el = document.querySelector<HTMLElement>(".wix-person-children");

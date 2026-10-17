@@ -19,6 +19,7 @@ import { uploadPicture } from "@/lib/photos/upload";
 //   child-add    block, childName, childPhoto?                              -> a new child at the end of the block
 //   child-photo  child, file | remove=1                                     -> the child's photo on THIS page
 //   child-name   child, childName                                           -> the child's full name (their entry)
+//   child-move   child, block (a block key, or "new")                    -> under another parent's group (or a new one)
 //   child-remove child                     -> off this page; their entry is deleted only if it holds nothing else
 //   block-remove block                     -> a block with no children left
 
@@ -220,6 +221,26 @@ export async function POST(req: NextRequest) {
     (block.children ??= []).push({ _key: newKey(), child: { _ref: child.id }, ...(pic ? { photo: pic } : {}) });
     error = await saveWithChild(child, `Added ${childName} under ${who}`);
     answer = { child: child.id };
+  } else if (op === "child-move") {
+    const found = findKid();
+    if (!found) return fail("This child isn't on this page's list. Reload the page and try again.", 409);
+    const node = graph.byId.get(childId);
+    let target = blockKey === "new" ? undefined : findBlock();
+    if (blockKey !== "new" && !target) return fail("This part of the page changed. Reload the page and try again.", 409);
+    if (target === found.block) return fail("They are already in that group.", 400);
+    found.block.children = (found.block.children ?? []).filter((k) => k !== found.kid);
+    if (!target) {
+      // a new group, placed right after the one they came from
+      target = { _key: `fam-${newKey()}`, children: [] };
+      families.splice(families.indexOf(found.block) + 1, 0, target);
+    }
+    (target.children ??= []).push(found.kid);
+    // the group they left: gone when it is now empty and says nothing (no other parent named, no photo)
+    const left = found.block;
+    if (!left.children?.length && !left.name && !left.role && !left.status && !left.photo) families.splice(families.indexOf(left), 1);
+    const to = target.name ? `${target.role ? `${target.role} ` : ""}${target.name}` : blockKey === "new" ? "a new group" : "another group";
+    error = await saveList(`Moved ${node?.title ?? childId} to ${to} on ${who}'s page`, [childId]);
+    answer = { block: target._key };
   } else if (op === "child-photo" || op === "child-name" || op === "child-remove") {
     const found = findKid();
     const node = graph.byId.get(childId);

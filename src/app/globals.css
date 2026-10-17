@@ -480,6 +480,7 @@ body {
 .kid-tools-menu { position: absolute; top: 28px; right: 0; display: flex; flex-direction: column; gap: 6px; width: 190px; padding: 10px; border-radius: 8px; background: #fff; box-shadow: 0 6px 24px #0004; font: 12px/1.3 system-ui, sans-serif; color: #222; }
 .kid-tools-menu > button { height: 28px; border: 1px solid #c9d5f3; background: #f3f6fd; color: #1d4fc4; }
 .kid-tools-menu label { display: flex; flex-direction: column; gap: 3px; }
+.kid-tools-menu select { padding: 4px 6px; border: 1px solid #9db6ee; border-radius: 4px; font: 12px/1.2 system-ui, sans-serif; background: #fff; }
 .kid-tools-menu input { padding: 4px 6px; border: 1px solid #9db6ee; border-radius: 4px; font: 13px/1.2 system-ui, sans-serif; }
 .kid-tools-menu .kid-tools-remove, .parent-slot-buttons .kid-tools-remove { border: 1px solid #f1b7ae; background: #fff4f2; color: #b42318; }
 
