@@ -2,19 +2,22 @@
 
 import { failText, plainError, sendJson } from "@/lib/net";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { cleanCrop, CROP_FIELDS, cropStyle, type ImageCrop } from "@/lib/content/crop";
+import { cleanCrop, CROP_FIELDS, cropStyle, LIST_CROP_FIELDS, type ImageCrop } from "@/lib/content/crop";
 
 /**
  * The crop window (edit mode only), opened by the Design tool with openCrop(img): the whole picture with a
  * crop box shaped like the frame it sits in. Drag the box to move it, drag a corner to size it (arrow keys
  * nudge, Shift = bigger steps). For a CMS picture "Save crop" writes the crop to that picture's field through
  * /api/image-crop and reloads; for a picture added with the Design tool it hands the crop back (onSave).
- * The frame then zooms into the cropped area (lib/content/crop.ts).
+ * The frame then zooms into the cropped area (lib/content/crop.ts). A picture inside a list (a child's or the
+ * other parent's photo on a parent's page, an Extra Memories photo) names its list item with data-crop-item.
  */
 
 type Target = {
   doc: string;
   field: string;
+  /** the list item, for a picture inside a list field (LIST_CROP_FIELDS) */
+  item?: string;
   src: string;
   sw: number;
   sh: number;
@@ -53,13 +56,15 @@ function targetOf(img: HTMLImageElement): Target | null {
   const host = img.closest<HTMLElement>("[data-sbx-doc]");
   const doc = host?.getAttribute("data-sbx-doc");
   const field = host?.getAttribute("data-sbx-field") ?? "";
+  const item = host?.getAttribute("data-crop-item") ?? undefined;
   if (!host || !doc || img.classList.contains("wix-canvas-art")) return null;
-  if (field ? !CROP_FIELDS.includes(field) : !doc.startsWith("photo-")) return null;
+  const listed = Boolean(item) && LIST_CROP_FIELDS.includes(field);
+  if (field ? !CROP_FIELDS.includes(field) && !listed : !doc.startsWith("photo-")) return null;
   if (!/^https?:/.test(img.currentSrc || img.src)) return null;
   const r = img.getBoundingClientRect();
   if (r.width < 8 || r.height < 8) return null;
   const label = img.alt || host.getAttribute("aria-label") || "this picture";
-  return { doc, field, src: largestSrc(img), sw: 0, sh: 0, frame: r.width / r.height, crop: savedCrop(img), label };
+  return { doc, field, item: listed ? item : undefined, src: largestSrc(img), sw: 0, sh: 0, frame: r.width / r.height, crop: savedCrop(img), label };
 }
 
 /** the biggest file in the <img>'s srcset (thumbnails may load a small one) */
@@ -211,7 +216,8 @@ export function CropDialog() {
     setStatus({ kind: "saving", text: "Saving…" });
     try {
       // `src` = the picture this crop was drawn on: refused if that spot holds another picture by now
-      const res = await sendJson("/api/image-crop", { doc: target.doc, field: target.field, crop, src: target.src });
+      // `size`: the picture's shape, saved with a picture inside a list (the site can't look it up there)
+      const res = await sendJson("/api/image-crop", { doc: target.doc, field: target.field, item: target.item, crop, src: target.src, size: { w: target.sw, h: target.sh } });
       const out = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(out.error ?? failText(res.status, "save the crop"));
       window.location.reload();

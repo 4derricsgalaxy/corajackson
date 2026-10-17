@@ -134,6 +134,8 @@ export function DesignEditor() {
   const s = useDesignState();
   const [active, setActive] = useState(false);
   const [sel, setSel] = useState<Sel>(null);
+  // the picture last clicked on the page: inside a piece holding several (the Memories strip), Crop takes that one
+  const [picked, setPicked] = useState<HTMLImageElement | null>(null);
   const [status, setStatus] = useState<{ kind: "idle" | "busy" | "ok" | "error"; text?: string }>({ kind: "idle" });
   const [modal, setModal] = useState<Modal>(null);
   const [panelLeft, setPanelLeft] = useState(false);
@@ -350,6 +352,8 @@ export function DesignEditor() {
       e.stopPropagation();
       e.preventDefault();
       if (e.button !== 0) return;
+      // (the picture under the pointer: a thumbnail's click lands on its button, not on the <img> itself)
+      setPicked(document.elementsFromPoint(e.clientX, e.clientY).find((n): n is HTMLImageElement => n instanceof HTMLImageElement) ?? null);
       const el = hit(e.target);
       const cur = selRef.current;
       const curEl = selEl(cur);
@@ -693,7 +697,7 @@ export function DesignEditor() {
         {sel?.kind === "page" || !sel ? (
           <PagePanel personPage={/^\/family\/[^/]+$/.test(path ?? "")} design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onPersonPicture={() => setModal({ kind: "picture", purpose: "person-bg" })} onPersonBackground={personBackground} bgPrevious={bgPrevious} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); setSel({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
         ) : (
-          <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} design={s.design} apply={apply} commit={commit} setSel={setSel} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} />
+          <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} picked={picked} design={s.design} apply={apply} commit={commit} setSel={setSel} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} />
         )}
       </aside>
 
@@ -765,8 +769,10 @@ function NumField({ label, value, placeholder, min, max, step = 1, onLive }: {
   );
 }
 
-function ItemPanel({ sel, design, apply, commit, setSel, onReplace, onSnackbox }: {
+function ItemPanel({ sel, picked, design, apply, commit, setSel, onReplace, onSnackbox }: {
   sel: Exclude<Sel, null | { kind: "page" }>;
+  /** the picture last clicked on the page */
+  picked: HTMLImageElement | null;
   design: Design;
   apply: (patch: Partial<Added>, mode?: "commit" | "live") => void;
   commit: (d: Design) => void;
@@ -781,7 +787,8 @@ function ItemPanel({ sel, design, apply, commit, setSel, onReplace, onSnackbox }
   const rect = el?.getBoundingClientRect();
   const label = sel.kind === "piece" ? pieceLabel(el, sel.key) : added?.label ? `Copy of ${added.label}` : ({ text: "Text box", image: "Picture", box: "Shape", html: "Copied piece" } as const)[added?.kind ?? "box"];
   const parent = sel.kind === "piece" ? el?.parentElement?.closest<HTMLElement>("[data-pd]") : null;
-  const img = el instanceof HTMLImageElement ? el : el?.querySelector("img");
+  // the clicked picture when it is inside this piece (one of several Memories photos), else the piece's picture
+  const img = el instanceof HTMLImageElement ? el : picked && el?.contains(picked) ? picked : el?.querySelector("img");
   const cmsField = sel.kind === "piece" && el && (el.matches("[data-sbx-field]") || el.querySelector("[data-sbx-field]") || el.closest("[data-sbx-field]"));
   const hasText = Boolean(added?.kind === "text" || (sel.kind === "piece" && (el?.textContent ?? "").trim()));
   // a caption (label, heading, button, child's name...) whose words can be changed on this page

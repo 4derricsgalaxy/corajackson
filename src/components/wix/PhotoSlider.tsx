@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { editableField } from "@/lib/cms/sdk";
-import { cropAttr, type ImageCrop } from "@/lib/content/crop";
+import { cropAttr, cropItemAttr, type ImageCrop } from "@/lib/content/crop";
 
 export interface SliderPhoto {
   key: string;
@@ -22,6 +22,8 @@ export interface SliderPhoto {
   crop?: ImageCrop;
   /** CMS entry this picture comes from; in edit mode a click opens it (field "" = the whole entry) */
   edit?: { docId: string; field: string };
+  /** which item of a list field the picture is ("gallery:2"), so the Crop tool can crop it */
+  cropItem?: string;
 }
 
 const editAttrs = (p: SliderPhoto) => (p.edit ? editableField(p.edit.docId, p.edit.field) : {});
@@ -133,6 +135,7 @@ export function PhotoSlider({ photos, label = "Photos", piece }: { photos: Slide
                   draggable={false}
                   style={p.cropStyle ?? (p.position ? { objectPosition: p.position } : undefined)}
                   {...cropAttr(p.crop)}
+                  {...cropItemAttr(p.cropItem)}
                   {...editAttrs(p)}
                 />
               </button>

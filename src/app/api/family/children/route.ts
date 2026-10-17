@@ -33,7 +33,7 @@ const STARTER_FIELDS = new Set(["title", "slug", "parent", "lineage", "generatio
 type Raw = Record<string, unknown>;
 /** a picture as saved in an entry. `url` is kept with it: the site shows a picture inside a list from that url
  *  when the asset isn't used anywhere else (lib/content/image.ts resolveImage) */
-type Pic = { _type: "asset"; _ref: string; alt: string; url?: string };
+type Pic = { _type: "asset"; _ref: string; alt: string; url?: string; width?: number; height?: number };
 type RawKid = Raw & { _key?: string; child?: { _ref?: string }; photo?: Raw };
 type RawBlock = Raw & { _key?: string; role?: string; name?: string; status?: string; photo?: Raw; children?: RawKid[] };
 
@@ -110,7 +110,8 @@ export async function POST(req: NextRequest) {
   };
   const picture = async (f: File, alt: string): Promise<Pic | NextResponse> => {
     const up = await uploadPicture(editor, f, alt);
-    return up.ok ? { _type: "asset", _ref: up.id, alt, ...(up.url ? { url: up.url } : {}) } : fail(up.error, up.status);
+    // (its size too, so a crop set on it later can be shown)
+    return up.ok ? { _type: "asset", _ref: up.id, alt, ...(up.url ? { url: up.url } : {}), ...(up.width && up.height ? { width: up.width, height: up.height } : {}) } : fail(up.error, up.status);
   };
   /** the words on a block: the fields sent are set, sent empty are removed, not sent are kept */
   const setWords = (block: RawBlock) => {

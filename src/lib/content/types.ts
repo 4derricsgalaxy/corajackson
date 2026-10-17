@@ -29,6 +29,10 @@ export interface NestedImage {
   position?: string;
   crop?: ImageCrop;
   focus?: ImageFocus;
+  /** the picture's size (only its shape matters), saved with it by the Crop tool and the Children slots: a picture
+   *  only used inside a list is not in the asset index, and a crop can't be shown without knowing its shape */
+  width?: number;
+  height?: number;
 }
 
 /** Portable Text blocks (Snackbox) or legacy HTML (seed). */

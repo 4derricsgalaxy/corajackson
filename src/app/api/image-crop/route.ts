@@ -3,21 +3,47 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
 import { actorFor, fromPage, logMutation } from "@/lib/cms/edit-log";
 import { mayChangeFor, notYours, pageAccess } from "@/lib/cms/page-access";
-import { cleanCrop, CROP_FIELDS } from "@/lib/content/crop";
+import { cleanCrop, CROP_FIELDS, LIST_CROP_FIELDS } from "@/lib/content/crop";
 const DOC_RE = /^[A-Za-z0-9_.:-]{1,80}$/;
+const ITEM_RE = /^(families|gallery):[A-Za-z0-9_.:-]{1,160}$/;
 
 // Save endpoint for the on-page Crop tool. Only a signed-in editor (requireEditor) can write, and only the
-// crop on one single-image field of the entry it names. Field "" = a Photos entry's own picture (`image`).
+// crop on one picture of the entry it names: a single-image field (field "" = a Photos entry's own picture,
+// `image`), or one picture inside a list field, named by `item` (see LIST_CROP_FIELDS):
+//   families:<block key>             the other parent's photo     families:<block key>:<child id>  a child's photo
+//   gallery:<index>                  an Extra Memories photo (found by the picture itself; the index breaks ties)
+// A picture inside a list also gets its size (`size`, from the browser): the site can't look it up there.
+
+type Holder = Record<string | number, unknown>;
+
+/** where the picture sits: the object (or list) holding it and its key there */
+function locate(list: unknown[], item: string, src: string): { holder: Holder; key: string | number } | null {
+  const [kind, a, b] = item.split(":");
+  if (kind === "families") {
+    const block = list.find((x) => (x as { _key?: unknown })?._key === a) as Holder | undefined;
+    if (!block) return null;
+    if (!b) return { holder: block, key: "photo" };
+    const kids = Array.isArray(block.children) ? (block.children as Holder[]) : [];
+    const kid = kids.find((k) => (k?.child as { _ref?: unknown } | undefined)?._ref === b);
+    return kid ? { holder: kid, key: "photo" } : null;
+  }
+  const at = Number(a);
+  const same = list.map((x, i) => ({ i, ref: (x as { _ref?: unknown })?._ref })).filter((x) => typeof x.ref === "string" && src.includes(`/${x.ref}`)).map((x) => x.i);
+  const i = same.includes(at) ? at : same[0];
+  return i === undefined ? null : { holder: list as unknown as Holder, key: i };
+}
 
 export async function POST(req: NextRequest) {
   const editor = await requireEditor("crops");
   if (editor instanceof NextResponse) return editor;
   const { api, auth } = editor;
 
-  const body = (await req.json().catch(() => null)) as { doc?: unknown; field?: unknown; crop?: unknown; src?: unknown } | null;
+  const body = (await req.json().catch(() => null)) as { doc?: unknown; field?: unknown; item?: unknown; crop?: unknown; src?: unknown; size?: { w?: unknown; h?: unknown } } | null;
   const docId = body?.doc;
   const field = body?.field === "" ? "image" : body?.field;
-  if (typeof docId !== "string" || !DOC_RE.test(docId) || typeof field !== "string" || !CROP_FIELDS.includes(field)) {
+  const item = typeof body?.item === "string" && ITEM_RE.test(body.item) ? body.item : undefined;
+  const listed = typeof field === "string" && LIST_CROP_FIELDS.includes(field);
+  if (typeof docId !== "string" || !DOC_RE.test(docId) || typeof field !== "string" || !(CROP_FIELDS.includes(field) || (listed && item?.startsWith(`${field}:`)))) {
     return NextResponse.json({ error: "This picture can't be cropped here." }, { status: 400 });
   }
   const crop = body?.crop === null ? null : cleanCrop(body?.crop);
@@ -37,9 +63,13 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     return NextResponse.json({ error: `Could not check which page is yours: ${(err as Error).message}` }, { status: 502 });
   }
-  const value = doc?.result?.[field];
+  // a single-image field holds the picture itself; a list field is copied and the picture found inside it
+  const fieldValue = doc?.result?.[field];
+  const list = listed && Array.isArray(fieldValue) ? (structuredClone(fieldValue) as unknown[]) : null;
+  const spot = list && item ? locate(list, item, typeof body?.src === "string" ? body.src : "") : null;
+  const value = listed ? spot?.holder[spot.key] : fieldValue;
   if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return NextResponse.json({ error: "That entry has no picture in this spot to crop." }, { status: 404 });
+    return NextResponse.json({ error: listed ? "This picture was changed since the page opened. Reload the page, then crop again." : "That entry has no picture in this spot to crop." }, { status: listed ? 409 : 404 });
   }
 
   // the crop was drawn on the picture the page showed: if someone has put a different picture in this spot
@@ -54,13 +84,16 @@ export async function POST(req: NextRequest) {
   delete rest.crop;
   delete rest.hotspot;
   const round = (n: number) => Math.round(n * 10000) / 10000;
-  const next = crop ? { ...rest, crop: { left: round(crop.left), top: round(crop.top), width: round(crop.width), height: round(crop.height) } } : rest;
+  const next: Record<string, unknown> = crop ? { ...rest, crop: { left: round(crop.left), top: round(crop.top), width: round(crop.width), height: round(crop.height) } } : rest;
+  const w = Number(body?.size?.w), h = Number(body?.size?.h);
+  if (listed && w > 0 && h > 0 && w < 50_000 && h < 50_000) Object.assign(next, { width: Math.round(w), height: Math.round(h) });
+  if (spot) spot.holder[spot.key] = next;
 
   const res = await fetch(`${api}/mutate`, {
     method: "POST",
     headers: { ...auth, "Content-Type": "application/json" },
     body: JSON.stringify({
-      mutations: [{ patch: { id: docId, set: { [field]: next } } }, logMutation(editor, { tool: "Crop", page: fromPage(req), entries: [docId], detail: crop ? `Cropped the picture (${field})` : `Removed the crop (${field})` })],
+      mutations: [{ patch: { id: docId, set: { [field]: list ?? next } } }, logMutation(editor, { tool: "Crop", page: fromPage(req), entries: [docId], detail: `${crop ? "Cropped the picture" : "Removed the crop"} (${item ?? field})` })],
       actor: actorFor(editor, "Crop"),
     }),
     cache: "no-store",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CmsImage } from "@/components/ui/CmsImage";
 import { editableField, stegaClean } from "@/lib/cms/sdk";
+import { cropItemAttr } from "@/lib/content/crop";
 import { resolveImage } from "@/lib/content/image";
 import { keyPart, pd, pdWords } from "@/lib/design/keys";
 import type { Look } from "@/lib/design/model";
@@ -140,7 +141,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
             )}
             <div className="wix-person-group-body">
               {block.partnerPhoto?.url && (
-                <span className="wix-person-partner" data-drop-parent={slot?.key} {...editableField(person._id, block.partnerField)} {...t(`partner-${keyPart(block.key)}`, undefined, `Photo: ${block.note?.name ?? "partner"}`)}>
+                <span className="wix-person-partner" data-drop-parent={slot?.key} {...editableField(person._id, block.partnerField)} {...cropItemAttr(block.family ? `families:${block.family.key}` : undefined)} {...t(`partner-${keyPart(block.key)}`, undefined, `Photo: ${block.note?.name ?? "partner"}`)}>
                   <CmsImage src={block.partnerPhoto} alt={block.partnerPhoto.alt || block.note?.name || ""} width={148} height={168} sizes="74px" />
                 </span>
               )}
@@ -151,7 +152,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                     <li key={child._id} data-drop-kid={slot && listed ? child._id : undefined} {...t(`kidtile-${keyPart(child._id)}`, undefined, `Child: ${firstName(child)}`)}>
                       <Link href={`/family/${child.slug}`} className="wix-person-kid">
                         {/* in edit mode the photo opens wherever it comes from: this member's list, or the child's own entry */}
-                        <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)} {...t(`kidphoto-${keyPart(child._id)}`, undefined, `Child photo: ${firstName(child)}`)}>
+                        <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)} {...cropItemAttr(pagePhoto && block.family ? `families:${block.family.key}:${child._id}` : undefined)} {...t(`kidphoto-${keyPart(child._id)}`, undefined, `Child photo: ${firstName(child)}`)}>
                           <PersonPortrait image={image} name={child.title} width={99} height={121} />
                         </span>
                         <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")} {...w(`kid-${keyPart(child._id)}`, firstName(child), `Child name: ${firstName(child)}`)} />

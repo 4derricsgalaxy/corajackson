@@ -71,6 +71,18 @@ export function cropStyle(
 /** Single-image fields the on-page Crop tool may set a crop on (a Photos entry's picture is `image`). */
 export const CROP_FIELDS = ["portrait", "treePhoto", "heroImage", "coverImage", "image"];
 
+/**
+ * Lists whose pictures the Crop tool may crop too. The picture's element says which item it is (`data-crop-item`):
+ * "families:<block key>" = the other parent's photo, "families:<block key>:<child id>" = a child's photo on
+ * that page, "gallery:<index>" = an Extra Memories photo.
+ */
+export const LIST_CROP_FIELDS = ["families", "gallery"];
+
+/** Marks a picture that sits inside a list with the item it is, for the Crop tool. */
+export function cropItemAttr(item: string | undefined): Record<string, string> {
+  return item ? { "data-crop-item": item } : {};
+}
+
 /** Marks an <img> with its saved crop so the Crop tool can start from it. */
 export function cropAttr(crop: ImageCrop | undefined): Record<string, string> {
   return crop ? { "data-crop": JSON.stringify(crop) } : {};

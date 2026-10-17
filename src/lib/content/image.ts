@@ -31,10 +31,11 @@ function art(v: ImageValue): Pick<SiteImage, "crop" | "focus"> {
 /** An image value stored inside a list item: keep the asset id even when no url was saved with it. */
 export function nestedFromCms(value: unknown): NestedImage | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const v = value as ImageValue & { _id?: string; _ref?: string };
+  const v = value as ImageValue & { _id?: string; _ref?: string; width?: unknown; height?: unknown };
   const assetId = v._ref ?? v._id;
   if (!assetId && !v.url) return undefined;
-  return { assetId, url: v.url || undefined, alt: v.alt ?? null, position: imagePosition(v), ...art(v) };
+  const size = typeof v.width === "number" && typeof v.height === "number" && v.width > 0 && v.height > 0 ? { width: v.width, height: v.height } : {};
+  return { assetId, url: v.url || undefined, alt: v.alt ?? null, position: imagePosition(v), ...size, ...art(v) };
 }
 
 /** Finish a nested image: the fully resolved asset (srcset, size) when the site has it, else the url saved with it. */
@@ -43,7 +44,7 @@ export function resolveImage(img: NestedImage | undefined, assets: Map<string, S
   const full = img.assetId ? assets.get(img.assetId) : undefined;
   // the crop belongs to where the picture is placed, not to the file: use the nested value's own
   if (full) return { ...full, alt: img.alt || full.alt, position: img.position ?? full.position, crop: img.crop, focus: img.focus };
-  return img.url ? { url: img.url, alt: img.alt, position: img.position, assetId: img.assetId, crop: img.crop, focus: img.focus } : undefined;
+  return img.url ? { url: img.url, alt: img.alt, position: img.position, assetId: img.assetId, crop: img.crop, focus: img.focus, width: img.width, height: img.height } : undefined;
 }
 
 /** Legacy Wix media URI (seed.json) → SiteImage with a CDN srcset. */

@@ -74,13 +74,13 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   const tagged = photos.filter((p) => p.peopleIds?.includes(person._id) || (person.depth <= 1 && p.lineageId === person._id && !p.peopleIds?.length));
   const seen = new Set<string>();
   const memories: SliderPhoto[] = [];
-  const add = (key: string, image: SiteImage, edit: SliderPhoto["edit"], caption?: string) => {
+  const add = (key: string, image: SiteImage, edit: SliderPhoto["edit"], caption?: string, cropItem?: string) => {
     if (!image?.url || seen.has(image.url)) return;
     seen.add(image.url);
-    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position, cropStyle: cropStyle(image, 1), crop: image.crop, edit });
+    memories.push({ key, url: image.url, srcset: image.srcset, fullUrl: fullSrc(image), alt: image.alt || caption || person.title, caption, position: image.position, cropStyle: cropStyle(image, 1), crop: image.crop, edit, cropItem });
   };
   // edit mode: a gallery picture opens this member's gallery list, a tagged photo opens its own Photos entry
-  (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, { docId: person._id, field: "gallery" }, img.alt || undefined));
+  (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, { docId: person._id, field: "gallery" }, img.alt || undefined, `gallery:${i}`));
   tagged.forEach((p) => add(p._id, p.image, { docId: p._id, field: "" }, p.caption || p.title || undefined));
 
   // a dropped photo is asked about first: a memory, a child's photo or the other parent's (the list's blocks and children)
