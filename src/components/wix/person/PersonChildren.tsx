@@ -5,7 +5,7 @@ import { resolveImage } from "@/lib/content/image";
 import { keyPart, pd, pdWords } from "@/lib/design/keys";
 import type { Look } from "@/lib/design/model";
 import type { Family, SiteImage, TreeNode } from "@/lib/content/types";
-import { KidSlot, KidTools, NewBlock, ParentEdit, PartnerSlot } from "./ChildSlots";
+import { ChildrenFit, KidSlot, KidTools, NewBlock, ParentEdit, PartnerSlot } from "./ChildSlots";
 import { PersonPortrait } from "./PersonPortrait";
 import { firstName, groupByParentNote, nameKey, parseParentNote, titleCase, type ParsedParentNote } from "./parent-note";
 
@@ -135,6 +135,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                 status={plain(block.family!.status)}
                 empty={!block.note}
                 canRemove={block.tiles.length === 0}
+                follow={`note-${keyPart(block.key)}`}
               />
             )}
             <div className="wix-person-group-body">
@@ -143,7 +144,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                   <CmsImage src={block.partnerPhoto} alt={block.partnerPhoto.alt || block.note?.name || ""} width={148} height={168} sizes="74px" />
                 </span>
               )}
-              {slot && <PartnerSlot path={slot.path} block={slot.key} filled={Boolean(block.partnerPhoto?.url)} />}
+              {slot && <PartnerSlot path={slot.path} block={slot.key} filled={Boolean(block.partnerPhoto?.url)} follow={`partner-${keyPart(block.key)}`} />}
               {block.tiles.length > 0 || slot ? (
                 <ul className="wix-person-kids">
                   {block.tiles.map(({ child, image, edit, listed, pagePhoto }) => (
@@ -156,7 +157,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                         <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")} {...w(`kid-${keyPart(child._id)}`, firstName(child), `Child name: ${firstName(child)}`)} />
                       </Link>
                       {slot && listed && (
-                        <KidTools path={slot.path} child={child._id} name={plain(child.title)} hasPagePhoto={Boolean(pagePhoto)} removable={slots!.removable.has(child._id)} />
+                        <KidTools path={slot.path} child={child._id} name={plain(child.title)} hasPagePhoto={Boolean(pagePhoto)} removable={slots!.removable.has(child._id)} follow={`kidphoto-${keyPart(child._id)}`} />
                       )}
                     </li>
                   ))}
@@ -170,7 +171,8 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
           </div>
         );
       })}
-      {slots && <NewBlock path={slots.path} />}
+      {slots && <NewBlock path={slots.path} follow={shown.length ? `group-${keyPart(shown[shown.length - 1].key)}` : undefined} />}
+      {slots && <ChildrenFit />}
     </section>
   );
 }

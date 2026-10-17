@@ -177,7 +177,7 @@ export function KidSlot({ path, block, first }: { path: string; block: string; f
 }
 
 /** the ✎ on a child already on the page: their photo here, their name, or (if added by mistake) take them off */
-export function KidTools({ path, child, name, hasPagePhoto, removable }: { path: string; child: string; name: string; hasPagePhoto: boolean; removable: boolean }) {
+export function KidTools({ path, child, name, hasPagePhoto, removable, follow }: { path: string; child: string; name: string; hasPagePhoto: boolean; removable: boolean; follow?: string }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(name);
   const save = useSave();
@@ -198,7 +198,7 @@ export function KidTools({ path, child, name, hasPagePhoto, removable }: { path:
   }, [open]);
 
   return (
-    <span className="kid-tools" ref={box}>
+    <span className="kid-tools" ref={box} data-follow={follow}>
       <button type="button" className="kid-tools-open" onClick={() => setOpen((v) => !v)} aria-expanded={open} title={`Change ${name}'s photo or name`}>
         {save.busy ? "…" : "✎"}
       </button>
@@ -243,7 +243,7 @@ export function KidTools({ path, child, name, hasPagePhoto, removable }: { path:
 }
 
 /** the other parent's photo frame in the block's gutter: an empty slot to fill, or a small Change button on the photo */
-export function PartnerSlot({ path, block, filled }: { path: string; block: string; filled: boolean }) {
+export function PartnerSlot({ path, block, filled, follow }: { path: string; block: string; filled: boolean; follow?: string }) {
   const save = useSave();
   const picker = usePicker((f) => void save.run(async () => {
     const p = await pickPicture(f);
@@ -252,7 +252,7 @@ export function PartnerSlot({ path, block, filled }: { path: string; block: stri
   }));
   return (
     <>
-      <button type="button" className={filled ? "partner-slot-change" : "partner-slot"} data-drop-parent={block} onClick={picker.open} disabled={save.busy} title="The other parent's photo">
+      <button type="button" className={filled ? "partner-slot-change" : "partner-slot"} data-drop-parent={block} data-follow={filled ? follow : undefined} onClick={picker.open} disabled={save.busy} title="The other parent's photo">
         {save.busy ? "Saving…" : filled ? "Change" : "+ Their photo"}
       </button>
       {picker.el}
@@ -279,7 +279,7 @@ function ParentFields({ role, name, status, onRole, onName, onStatus, disabled }
 }
 
 /** "✎ Other parent" under a block's note (or "+ Other parent" when the block has none) */
-export function ParentEdit({ path, block, role, name, status, empty, canRemove }: { path: string; block: string; role: string; name: string; status: string; empty: boolean; canRemove: boolean }) {
+export function ParentEdit({ path, block, role, name, status, empty, canRemove, follow }: { path: string; block: string; role: string; name: string; status: string; empty: boolean; canRemove: boolean; follow?: string }) {
   const [open, setOpen] = useState(false);
   const [r, setR] = useState(role);
   const [n, setN] = useState(name);
@@ -287,13 +287,13 @@ export function ParentEdit({ path, block, role, name, status, empty, canRemove }
   const save = useSave();
   if (!open) {
     return (
-      <button type="button" className="parent-slot-open" onClick={() => setOpen(true)}>
+      <button type="button" className="parent-slot-open" data-follow={empty ? undefined : follow} onClick={() => setOpen(true)}>
         {empty ? "+ Other parent's name" : "✎ Other parent"}
       </button>
     );
   }
   return (
-    <span className="parent-slot-form">
+    <span className="parent-slot-form" data-follow={empty ? undefined : follow}>
       <ParentFields role={r} name={n} status={s} onRole={setR} onName={setN} onStatus={setS} disabled={save.busy} />
       <span className="parent-slot-buttons">
         <button
@@ -320,7 +320,7 @@ export function ParentEdit({ path, block, role, name, status, empty, canRemove }
  * A new block: the other parent (photo, name, status) + the first child, saved together. On a page that has
  * children it waits as one dashed "+ Children with another parent" line; Cancel folds it away again.
  */
-export function NewBlock({ path, starter, onCancel }: { path: string; starter?: boolean; onCancel?: () => void }) {
+export function NewBlock({ path, starter, onCancel, follow }: { path: string; starter?: boolean; onCancel?: () => void; follow?: string }) {
   const [open, setOpen] = useState(Boolean(starter));
   const [role, setRole] = useState("");
   const [name, setName] = useState("");
@@ -336,7 +336,7 @@ export function NewBlock({ path, starter, onCancel }: { path: string; starter?: 
 
   if (!open) {
     return (
-      <button type="button" className="block-slot-open" onClick={() => setOpen(true)}>
+      <button type="button" className="block-slot-open" data-follow={follow} onClick={() => setOpen(true)}>
         + Children with another parent
       </button>
     );
@@ -426,4 +426,61 @@ export function ChildrenStart({ path, first }: { path: string; first: string }) 
       {form}
     </>
   );
+}
+
+/**
+ * The slot controls sit in the page's normal flow, but the Design tool moves pieces only visually (a `translate`).
+ * Each control names the piece it belongs to (`data-follow` = its data-pd key: the child's photo, the other
+ * parent's note or photo, the last group) and takes over that piece's move, so it stays on it instead of being
+ * left behind under some other moved piece.
+ *
+ * It also keeps the Children list (with its slots) out from under the Memories strip. The slots make the list taller in
+ * edit mode, and on a page whose Design moved Memories up (Derrick's) the last groups slid underneath it; the list
+ * now stops just above Memories and scrolls inside. Off while Design is open, on phones, and when it already fits.
+ */
+export function ChildrenFit() {
+  useEffect(() => {
+    const fit = () => {
+      for (const el of document.querySelectorAll<HTMLElement>("[data-follow]")) {
+        const piece = document.querySelector(`[data-pd="${CSS.escape(el.dataset.follow ?? "")}"]`);
+        const moved = piece ? getComputedStyle(piece).translate : "none";
+        el.style.translate = moved && moved !== "none" ? moved : "";
+      }
+      const list = document.querySelector<HTMLElement>(".wix-person-children");
+      if (!list) return;
+      list.style.maxHeight = "";
+      list.classList.remove("kid-slots-fit");
+      const memories = document.querySelector<HTMLElement>(".wix-person-memories");
+      if (!memories || window.innerWidth < 980 || document.documentElement.classList.contains("pd-editing")) return;
+      const room = Math.floor(memories.getBoundingClientRect().top - list.getBoundingClientRect().top - 10);
+      if (room > 150 && list.scrollHeight > room) {
+        list.style.maxHeight = `${room}px`;
+        list.classList.add("kid-slots-fit");
+      }
+    };
+    let frame = 0;
+    const later = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(fit);
+    };
+    later();
+    const sizes = new ResizeObserver(later);
+    const list = document.querySelector(".wix-person-children");
+    if (list) for (const child of Array.from(list.children)) sizes.observe(child);
+    // Design opening or closing, and the page's design styles arriving after load
+    const design = new MutationObserver(later);
+    design.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("resize", later);
+    window.addEventListener("load", later);
+    return () => {
+      cancelAnimationFrame(frame);
+      sizes.disconnect();
+      design.disconnect();
+      window.removeEventListener("resize", later);
+      window.removeEventListener("load", later);
+      const el = document.querySelector<HTMLElement>(".wix-person-children");
+      if (el) el.style.maxHeight = "";
+    };
+  }, []);
+  return null;
 }
