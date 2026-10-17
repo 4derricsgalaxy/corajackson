@@ -150,9 +150,9 @@ export function KidSlot({ path, block, first }: { path: string; block: string; f
         photo.clear();
       });
 
-  const spot = useNextSpot();
-  return (
-    <li className="kid-slot" data-drop-newkid={block} ref={spot}>
+  const { spot, float, wide } = useNextSpot();
+  const controls = (
+    <>
       <button type="button" className="kid-slot-photo" onClick={picker.open} disabled={save.busy} title="Pick this child's photo">
         <Thumb picked={photo.picked} getting={photo.getting} label={first ? "+ Child's photo" : "+ Next child"} className="kid-slot-thumb" />
       </button>
@@ -173,26 +173,47 @@ export function KidSlot({ path, block, first }: { path: string; block: string; f
         </button>
       )}
       <Problem text={photo.error || save.error} />
-    </li>
+    </>
   );
+  // wide screens: the li only marks the spot, and the controls float over the whole page there (see useNextSpot)
+  if (wide) {
+    return (
+      <li className="kid-slot kid-slot-spot" ref={spot}>
+        {createPortal(<div className="kid-slot kid-slot-float" data-drop-newkid={block} ref={float}>{controls}</div>, document.body)}
+      </li>
+    );
+  }
+  return <li className="kid-slot" data-drop-newkid={block}>{controls}</li>;
 }
 
 /**
- * On a wide screen the empty slot floats (it takes no room, so the page is laid out as visitors see it) in the spot the
+ * On a wide screen the empty slot takes no room (the page is laid out as visitors see it) and floats in the spot the
  * next child will take: the next free cell of the 3-across grid, or the start of a new row under the last one.
- * Phones keep it in the list (CSS).
+ * When the children were moved in Design, it moves with them: it takes the move of the child before it in the row
+ * (or, starting a new row, of the child above it), so it lines up with the moved photos. The controls are drawn
+ * over the whole page (not inside it), so a row moved out to the page's edge doesn't cut them off. Phones keep
+ * the slot in the list.
  */
 function useNextSpot() {
-  const ref = useRef<HTMLLIElement>(null);
+  const spot = useRef<HTMLLIElement>(null);
+  const float = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(false);
   useEffect(() => {
-    const li = ref.current;
+    const mq = window.matchMedia("(min-width: 980px)");
+    const on = () => setWide(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
+  useEffect(() => {
+    const li = spot.current, box = float.current;
     const ul = li?.parentElement;
-    if (!li || !ul) return;
+    if (!wide || !li || !box || !ul) return;
     const place = () => {
       const cs = getComputedStyle(ul);
       const cols = cs.gridTemplateColumns.split(" ").map((v) => parseFloat(v) || 0);
       const colGap = parseFloat(cs.columnGap) || 0, rowGap = parseFloat(cs.rowGap) || 0;
-      const tiles = Array.from(ul.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c !== li && !c.classList.contains("kid-slot"));
+      const tiles = Array.from(ul.children).filter((c): c is HTMLElement => c instanceof HTMLElement && !c.classList.contains("kid-slot"));
       const n = tiles.length, per = Math.max(1, cols.length), col = n % per, row = Math.floor(n / per);
       let top = 0;
       if (row * per < n) top = tiles[row * per].offsetTop;
@@ -202,13 +223,44 @@ function useNextSpot() {
       }
       li.style.left = `${cols.slice(0, col).reduce((a, b) => a + b + colGap, 0)}px`;
       li.style.top = `${top}px`;
+      // the neighbour it lines up with: the child to its left, or the first child of the row above
+      const near = col > 0 ? tiles[n - 1] : n ? tiles[(row - 1) * per] : undefined;
+      const [x, y] = near ? movedBy(near) : [0, 0];
+      const at = li.getBoundingClientRect();
+      box.style.left = `${at.left + scrollX + x}px`;
+      box.style.top = `${at.top + scrollY + y}px`;
     };
     place();
+    // anything above it changing size moves it: the list, the page, the window
     const sizes = new ResizeObserver(place);
     sizes.observe(ul);
-    return () => sizes.disconnect();
-  }, []);
-  return ref;
+    sizes.observe(document.body);
+    // the page's design styles arriving after load, and Design closing
+    const design = new MutationObserver(place);
+    design.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    window.addEventListener("load", place);
+    window.addEventListener("resize", place);
+    return () => {
+      sizes.disconnect();
+      design.disconnect();
+      window.removeEventListener("load", place);
+      window.removeEventListener("resize", place);
+    };
+  }, [wide]);
+  return { spot, float, wide };
+}
+
+/** how far Design moved a child's tile: the tile's own move (older saves) plus its photo's */
+function movedBy(tile: HTMLElement): [number, number] {
+  let x = 0, y = 0;
+  for (const el of [tile, tile.querySelector<HTMLElement>(".wix-person-kid-photo")]) {
+    const t = el ? getComputedStyle(el).translate : "none";
+    if (!t || t === "none") continue;
+    const [a, b] = t.split(" ").map((v) => parseFloat(v) || 0);
+    x += a;
+    y += b ?? 0;
+  }
+  return [x, y];
 }
 
 /** the ✎ on a child already on the page: their photo here, their name, or (if added by mistake) take them off */

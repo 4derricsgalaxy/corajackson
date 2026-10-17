@@ -527,6 +527,8 @@ body {
   .wix-person-group > .parent-slot-form { position: absolute; z-index: 6; top: 0; right: 0; width: 300px; margin: 0; padding: 10px; border-radius: 8px; background: #fff; box-shadow: 0 6px 24px #0004; }
   .wix-person-group:not(.block-slot) .wix-person-kids:has(> .kid-slot) { position: relative; }
   .wix-person-group:not(.block-slot) .wix-person-kids > .kid-slot { position: absolute; }
+  .wix-person-kids > .kid-slot-spot { height: 0; pointer-events: none; }
+  .kid-slot.kid-slot-float { position: absolute; z-index: 30; }
   .wix-person-kids-none { height: 0; margin-top: 0; }
   .wix-person-children > .block-slot-open { position: absolute; }
   .wix-person-children:not(.kid-slot-start) > .block-slot { position: absolute; z-index: 6; left: 0; width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; background: rgb(255 255 255 / .97); box-shadow: 0 6px 24px #0004; }
