@@ -417,33 +417,34 @@ body {
   color: inherit;
 }
 /* edit-binding wrapper for the child's photo: exactly the photo's box, so the layout is unchanged */
-.wix-person-kid-photo { display: block; width: 99px; height: 121px; }
+.wix-person-kid-photo { position: relative; display: block; width: 99px; height: 121px; }
 .wix-person-kid .wix-person-photo { width: 99px; height: 121px; transition: filter 0.2s; }
 .wix-person-kid:hover .wix-person-photo { filter: brightness(1.08); }
 /* the thin "lifted" shadow line the original drew under each row of baby photos:
-   every child draws its segment; the first/last of a row fade out past the photos */
-.wix-person-kid::after {
+   every child draws its segment; the first/last of a row fade out past the photos.
+   It hangs off the photo (not the tile) so it goes wherever the photo is moved in Design */
+.wix-person-kid-photo::after {
   content: "";
   position: absolute;
   left: -7.5px;
   right: -7.5px;
-  top: 121px;
+  top: 100%;
   height: 8px;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0, rgba(0, 0, 0, 0.8) 1px, rgba(0, 0, 0, 0.3) 1px, rgba(0, 0, 0, 0.08) 5px, rgba(0, 0, 0, 0) 8px);
   pointer-events: none;
 }
-.wix-person-kids > li:nth-child(3n + 1) .wix-person-kid::after {
+.wix-person-kids > li:nth-child(3n + 1) .wix-person-kid-photo::after {
   left: -45px;
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 45px);
   mask-image: linear-gradient(to right, transparent 0, #000 45px);
 }
-.wix-person-kids > li:nth-child(3n) .wix-person-kid::after,
-.wix-person-kids > li:last-child .wix-person-kid::after {
+.wix-person-kids > li:nth-child(3n) .wix-person-kid-photo::after,
+.wix-person-kids > li:last-child .wix-person-kid-photo::after {
   right: -45px;
   -webkit-mask-image: linear-gradient(to left, transparent 0, #000 45px);
   mask-image: linear-gradient(to left, transparent 0, #000 45px);
 }
-.wix-person-kids > li:nth-child(3n + 1):last-child .wix-person-kid::after {
+.wix-person-kids > li:nth-child(3n + 1):last-child .wix-person-kid-photo::after {
   left: -30px;
   right: -30px;
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 30px, #000 calc(100% - 30px), transparent 100%);
@@ -704,12 +705,12 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
   .wix-person-kids { margin-left: 0; }
   .wix-person-partner { position: static; display: block; margin: 8px 0 12px; }
   .wix-person-nokids { margin-left: 0; min-height: 0; }
-  .wix-person-kids > li:nth-child(3n + 1) .wix-person-kid::after {
+  .wix-person-kids > li:nth-child(3n + 1) .wix-person-kid-photo::after {
     left: -16px;
     -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px);
     mask-image: linear-gradient(to right, transparent 0, #000 16px);
   }
-  .wix-person-kids > li:nth-child(3n + 1):last-child .wix-person-kid::after {
+  .wix-person-kids > li:nth-child(3n + 1):last-child .wix-person-kid-photo::after {
     left: -16px;
     right: -16px;
     -webkit-mask-image: linear-gradient(to right, transparent 0, #000 16px, #000 calc(100% - 16px), transparent 100%);

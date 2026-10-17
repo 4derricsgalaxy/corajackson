@@ -13,13 +13,16 @@ export interface DesignState {
   /** canvas width the design's px refer to (980, the tree page 744) */
   baseW: number;
   saved: Design;
+  /** what the CMS really holds (sent with Save so a save over someone else's is caught); `saved` can differ from it
+   * only by a tidy-up that looks the same (see adopt) */
+  base: Design;
   design: Design;
   past: Design[];
   future: Design[];
 }
 
 const LIMIT = 100;
-let state: DesignState = { path: "", baseW: 980, saved: emptyDesign(), design: emptyDesign(), past: [], future: [] };
+let state: DesignState = { path: "", baseW: 980, saved: emptyDesign(), base: emptyDesign(), design: emptyDesign(), past: [], future: [] };
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
@@ -33,7 +36,7 @@ export const designStore = {
   init(path: string, baseW: number, design: Design | undefined) {
     if (state.path === path && state.baseW === baseW) return;
     const d = design ?? emptyDesign();
-    state = { path, baseW, saved: d, design: d, past: [], future: [] };
+    state = { path, baseW, saved: d, base: d, design: d, past: [], future: [] };
     emit();
   },
   /** a change that Undo can take back */
@@ -63,7 +66,13 @@ export const designStore = {
     emit();
   },
   markSaved(d: Design) {
-    state = { ...state, saved: d };
+    state = { ...state, saved: d, base: d };
+    emit();
+  },
+  /** take a tidied copy that looks the same as the saved design without calling it an unsaved change
+   * (it is written with the next Save; `base` stays what the CMS holds) */
+  adopt(tidy: Design, tidyDesign: Design) {
+    state = { ...state, saved: tidy, design: state.design === state.saved ? tidy : tidyDesign };
     emit();
   },
   discard() {

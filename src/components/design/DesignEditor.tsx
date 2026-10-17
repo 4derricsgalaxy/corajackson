@@ -128,24 +128,37 @@ function placeBox(f: HTMLElement, r: ReturnType<typeof visualRect>) {
   if (r) Object.assign(f.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.right - r.left}px`, height: `${r.bottom - r.top}px` });
 }
 
+/** a page piece that only holds other pieces (a child's tile, a Children group, a section): nothing of its own to see */
+function isHolder(el: Element): boolean {
+  if (!el.matches("[data-pd]") || !el.querySelector("[data-pd], [data-pd-id]")) return false;
+  const own = (node: Element): boolean =>
+    Array.from(node.childNodes).some((n) =>
+      n.nodeType === Node.TEXT_NODE ? Boolean(n.textContent?.trim())
+        : n instanceof Element && !n.matches("[data-pd], [data-pd-id], .pd-ui") && (n instanceof HTMLImageElement || n.matches("svg, input, textarea, select") || own(n)));
+  return !own(el);
+}
+const holderEls = () => Array.from(document.querySelectorAll<HTMLElement>("[data-pd]")).filter(isHolder);
+const depthOf = (el: Element) => { let n = 0; for (let p = el.parentElement; p; p = p.parentElement) n++; return n; };
+
 /**
- * a box whose pieces have all been moved the same way (a child's photo and name, every part of a Children group)
- * takes that move itself, so the box travels with what is in it instead of staying behind empty (still clickable
- * and in the way). Looks the same: moves are shifts, and a shifted box shifts everything in it. Innermost boxes first.
+ * holders are not designed: a move stored on one (from before) is handed to the pieces in it, outermost first, so
+ * every move sits on something you can click. Looks the same - a moved holder only shifted what is in it.
+ * Its other settings (sizes) stay; the Page panel lists them.
  */
-function foldMoves(d: Design): Design {
-  const depth = (el: Element) => { let n = 0; for (let p = el.parentElement; p; p = p.parentElement) n++; return n; };
-  const boxes = Array.from(document.querySelectorAll<HTMLElement>("[data-pd]")).filter((el) => el.querySelector("[data-pd]")).sort((a, b) => depth(b) - depth(a));
+function flattenHolders(d: Design): Design {
   let out = d;
-  for (const box of boxes) {
+  for (const box of holderEls().sort((a, b) => depthOf(a) - depthOf(b))) {
     const key = box.getAttribute("data-pd")!;
-    const kids = Array.from(box.querySelectorAll<HTMLElement>("[data-pd]")).filter((el) => el.parentElement?.closest("[data-pd]") === box);
-    const moves = kids.map((el) => out.items[el.getAttribute("data-pd")!] ?? {});
-    const x = moves[0]?.x ?? 0, y = moves[0]?.y ?? 0;
-    if (!kids.length || (!x && !y) || moves.some((m) => (m.x ?? 0) !== x || (m.y ?? 0) !== y)) continue;
-    const own = out.items[key] ?? {};
-    out = withLook(out, { kind: "piece", key }, { x: (own.x ?? 0) + x || undefined, y: (own.y ?? 0) + y || undefined });
-    for (const el of kids) out = withLook(out, { kind: "piece", key: el.getAttribute("data-pd")! }, { x: undefined, y: undefined });
+    const own = out.items[key];
+    if (!own || (!own.x && !own.y)) continue;
+    const kids = Array.from(box.querySelectorAll<HTMLElement>("[data-pd], [data-pd-id]")).filter((el) => el.parentElement?.closest("[data-pd]") === box);
+    for (const el of kids) {
+      const k = el.getAttribute("data-pd");
+      if (!k) continue; // (added things never sit inside page pieces)
+      const look = out.items[k] ?? {};
+      out = withLook(out, { kind: "piece", key: k }, { x: (look.x ?? 0) + (own.x ?? 0) || undefined, y: (look.y ?? 0) + (own.y ?? 0) || undefined });
+    }
+    out = withLook(out, { kind: "piece", key }, { x: undefined, y: undefined });
   }
   return out;
 }
@@ -296,6 +309,16 @@ export function DesignEditor() {
     return () => { live = false; };
   }, [active, path, access?.path]);
 
+  // moves stored on holders (from before they stopped being designable) go to the pieces in them when Design opens;
+  // it looks the same, so it is not an unsaved change - the next Save writes it
+  const canEdit = access?.path === path && access.canEdit;
+  useEffect(() => {
+    if (!active || !canEdit || !path || path !== window.location.pathname) return;
+    const { saved, design } = designStore.get();
+    const tidy = flattenHolders(saved);
+    if (tidy !== saved) designStore.adopt(tidy, flattenHolders(design));
+  }, [active, canEdit, path]);
+
   /* ---------- selection frame follows the selected thing (every frame: pages move while you work) ---------- */
   useEffect(() => {
     if (!active) return;
@@ -384,11 +407,12 @@ export function DesignEditor() {
   /* ---------- pointer + keyboard on the page ---------- */
   useEffect(() => {
     if (!active) return;
-    // what a click picks: the nearest piece - but not a section that only holds other pieces (Portrait, facts and
-    // write-up; a Children group...) when the click lands on its empty space. Only real things - pictures, words,
-    // buttons - are picked and outlined; a whole section is still reachable with "Bigger piece".
+    // what a click picks: the nearest real thing - a picture, words, a button, or a piece made of those (a fact
+    // with its label, a tree tile with its name). Holders - a child's tile, a Children group, a section - are never
+    // picked or outlined: clicking their empty space selects the page. (Ctrl+click moves several things together.)
     const hit = (t: EventTarget | null) => {
       const el = t instanceof Element ? t.closest<HTMLElement>("[data-pd-id], [data-pd]") : null;
+      if (el && isHolder(el)) return null;
       if (!el || !(t instanceof Element) || el.hasAttribute("data-pd-id") || !el.querySelector("[data-pd], [data-pd-id]")) return el;
       // (a link or button wrapped around pieces - a child's tile around its photo and name - is not content: once
       // those pieces are moved away its empty spot must not pick the box)
@@ -540,7 +564,6 @@ export function DesignEditor() {
       const d = drag.current;
       if (!d || e.pointerId !== d.pointerId) return;
       drag.current = null;
-      if (d.moved && d.mode === "move") designStore.live(foldMoves(designStore.get().design));
       if (!d.moved && d.clickTarget) {
         select(selOf(d.clickTarget as HTMLElement));
       }
@@ -585,7 +608,7 @@ export function DesignEditor() {
           d = withLook(d, cur, { x: (look.x ?? 0) + delta[0] || undefined, y: (look.y ?? 0) + delta[1] || undefined });
         }
       }
-      commit(foldMoves(d));
+      commit(d);
     };
     // Ctrl+V: a picture copied from anywhere is uploaded and placed; else the Design tool's own clipboard
     const onPaste = (e: ClipboardEvent) => {
@@ -682,9 +705,9 @@ export function DesignEditor() {
   const save = async (force = false) => {
     setStatus({ kind: "busy", text: "Saving…" });
     try {
-      const { design, saved } = designStore.get();
+      const { design, base } = designStore.get();
       // `base` = the saved design this edit started from: the server refuses if someone else saved since
-      const res = await sendJson("/api/design", { path, design, base: saved, force });
+      const res = await sendJson("/api/design", { path, design, base, force });
       const out = (await res.json().catch(() => ({}))) as { error?: string; conflict?: boolean; design?: Design | null };
       if (res.status === 409 && out.conflict) {
         const yours = window.confirm(
@@ -828,7 +851,7 @@ export function DesignEditor() {
 
       {modal?.kind === "picture" && <PicturePicker onPick={onPicked} onClose={() => setModal(null)} />}
       {modal?.kind === "copy" && <CopyToPages path={path} onClose={() => setModal(null)} />}
-      {modal?.kind === "versions" && <Versions path={path} onLoad={(d) => { commit(d ?? emptyDesign()); setModal(null); }} onClose={() => setModal(null)} />}
+      {modal?.kind === "versions" && <Versions path={path} onLoad={(d) => { commit(flattenHolders(d ?? emptyDesign())); setModal(null); }} onClose={() => setModal(null)} />}
     </>
   );
 }
@@ -911,7 +934,8 @@ function ItemPanel({ sel, picked, design, apply, commit, setSel, onReplace, onSn
   const cs = el ? getComputedStyle(el) : undefined;
   const rect = el?.getBoundingClientRect();
   const label = sel.kind === "piece" ? pieceLabel(el, sel.key) : added?.label ? `Copy of ${added.label}` : ({ text: "Text box", image: "Picture", box: "Shape", html: "Copied piece" } as const)[added?.kind ?? "box"];
-  const parent = sel.kind === "piece" ? el?.parentElement?.closest<HTMLElement>("[data-pd]") : null;
+  let parent = sel.kind === "piece" ? el?.parentElement?.closest<HTMLElement>("[data-pd]") : null;
+  while (parent && isHolder(parent)) parent = parent.parentElement?.closest<HTMLElement>("[data-pd]") ?? null;
   // the clicked picture when it is inside this piece (one of several Memories photos), else the piece's picture
   const img = el instanceof HTMLImageElement ? el : picked && el?.contains(picked) ? picked : el?.querySelector("img");
   const cmsField = sel.kind === "piece" && el && (el.matches("[data-sbx-field]") || el.querySelector("[data-sbx-field]") || el.closest("[data-sbx-field]"));
@@ -1074,6 +1098,9 @@ function PagePanel({ personPage, design, commit, onPicture, onPersonPicture, onP
     else commit(d);
   };
   const hidden = Object.entries(design.items).filter(([, l]) => l.hidden).map(([k]) => k);
+  // holders can't be clicked, so a size (or other setting) left on one from before is listed here to reset
+  const sized = Object.entries(design.items).filter(([k, l]) => !l.hidden && Object.keys(l).length && pieceEl(k) && isHolder(pieceEl(k)!)).map(([k, l]) => ({ key: k, look: l }));
+  const sizeText = (l: Look) => [l.w && `width ${l.w}`, l.h && `height ${l.h}`].filter(Boolean).join(", ") || "changed look";
   return (
     <div className="pd-sections">
       <div className="pd-head">
@@ -1130,6 +1157,18 @@ function PagePanel({ personPage, design, commit, onPicture, onPersonPicture, onP
             <div key={key} className="pd-row">
               <span className="pd-lab pd-grow">{pieceLabel(pieceEl(key), key)}</span>
               <button type="button" className="pd-mini" onClick={() => onShow(key)}>Bring back</button>
+            </div>
+          ))}
+        </details>
+      )}
+      {sized.length > 0 && (
+        <details open className="pd-sec">
+          <summary>Section sizes ({sized.length})</summary>
+          <p className="pd-hint">Sections that hold other pieces can&apos;t be clicked. These ones were given a size before; Reset puts them back to normal.</p>
+          {sized.map(({ key, look }) => (
+            <div key={key} className="pd-row">
+              <span className="pd-lab pd-grow">{pieceLabel(pieceEl(key), key)} <small>({sizeText(look)})</small></span>
+              <button type="button" className="pd-mini" onClick={() => { const items = { ...design.items }; delete items[key]; commit({ ...design, items }); }}>Reset</button>
             </div>
           ))}
         </details>
