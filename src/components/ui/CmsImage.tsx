@@ -45,6 +45,8 @@ export function CmsImage({ src, alt, width, height, className, priority, sizes, 
       className={className}
       style={style}
       {...cropAttr(src.crop)}
+      // a crop on a picture whose size Snackbox doesn't know: drawn in the browser once it has loaded (LateCrop)
+      {...(src.crop && !crop && !(src.width && src.height) ? { "data-crop-late": "" } : {})}
       {...edit}
     />
   );

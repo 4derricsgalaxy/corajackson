@@ -135,6 +135,7 @@ export function PhotoSlider({ photos, label = "Photos", piece }: { photos: Slide
                   draggable={false}
                   style={p.cropStyle ?? (p.position ? { objectPosition: p.position } : undefined)}
                   {...cropAttr(p.crop)}
+                  {...(p.crop && !p.cropStyle ? { "data-crop-late": "" } : {})}
                   {...cropItemAttr(p.cropItem)}
                   {...editAttrs(p)}
                 />

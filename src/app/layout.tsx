@@ -5,6 +5,7 @@ import "./globals.css";
 import { bioFontVariables, clarendon, didot, lulo, poppins, proxima } from "./fonts";
 import { getSettings } from "@/lib/content/queries";
 import { CropDialog } from "@/components/design/CropDialog";
+import { LateCrop } from "@/components/ui/LateCrop";
 import { DesignEditor } from "@/components/design/DesignEditor";
 import { EditShortcut } from "@/components/wix/layout/EditShortcut";
 
@@ -37,6 +38,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="relative px-0 pb-[52px] pt-0 md:pt-[5px]">{children}</main>
         {editing && <DesignEditor />}
         {editing && <CropDialog />}
+        {/* crops on pictures Snackbox has no size for are drawn in the browser */}
+        <LateCrop />
         {/* Ctrl+E: edit the page you are on */}
         <EditShortcut editing={editing} />
         {/* Snackbox on-page editing: inert for visitors, activates for signed-in editors */}
