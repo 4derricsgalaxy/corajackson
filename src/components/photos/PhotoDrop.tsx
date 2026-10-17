@@ -3,12 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { failText, plainError, sendForm } from "@/lib/net";
+import { DropChooser, type DropChoices, type DropHint } from "./DropChooser";
 import { HeicDecodeError, MAX_RAW_BYTES, PHOTO_ACCEPT, isHeicFile, looksLikePicture, preparePhoto, titleFromFileName } from "@/lib/photos/prepare";
 
 /**
  * Edit mode only. Drop photos anywhere on a person's page (or a family's Gallery album), or press
  * "Add photos": each picture is turned upright, converted from iPhone HEIC if needed, shrunk, uploaded and
  * saved as a published Photos entry tagged with that person / filed in that album.
+ * With `choices` (a person's page the editor may change) each photo is first asked about: a memory (as above),
+ * a child's photo or the other parent's photo (see DropChooser).
  */
 export type PhotoTarget =
   | { kind: "person"; id: string; name: string; first: string }
@@ -36,9 +39,11 @@ const STATUS_TEXT: Record<Status, string> = {
   error: "Not added",
 };
 
-export function PhotoDrop({ target }: { target: PhotoTarget }) {
+export function PhotoDrop({ target, choices }: { target: PhotoTarget; choices?: DropChoices }) {
   const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
+  // photos waiting for "what is this photo?" (only with `choices`)
+  const [ask, setAsk] = useState<{ id: number; files: File[]; hint?: DropHint } | null>(null);
   const [over, setOver] = useState(false);
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
@@ -160,7 +165,20 @@ export function PhotoDrop({ target }: { target: PhotoTarget }) {
       e.preventDefault();
       depth.current = 0;
       setOver(false);
-      void addFiles(Array.from(e.dataTransfer?.files ?? []));
+      const files = Array.from(e.dataTransfer?.files ?? []);
+      if (!files.length) return;
+      if (!choices) {
+        void addFiles(files);
+        return;
+      }
+      // dropped straight onto a child, an other parent's frame or an empty child slot: that answer comes first
+      const on = e.target instanceof Element ? e.target : null;
+      const hint: DropHint = {
+        kid: on?.closest<HTMLElement>("[data-drop-kid]")?.dataset.dropKid,
+        parent: on?.closest<HTMLElement>("[data-drop-parent]")?.dataset.dropParent,
+        newKidIn: on?.closest<HTMLElement>("[data-drop-newkid]")?.dataset.dropNewkid,
+      };
+      setAsk({ id: Date.now(), files, hint });
     };
     window.addEventListener("dragenter", enter, true);
     window.addEventListener("dragover", overHandler, true);
@@ -172,7 +190,7 @@ export function PhotoDrop({ target }: { target: PhotoTarget }) {
       window.removeEventListener("dragleave", leave, true);
       window.removeEventListener("drop", drop, true);
     };
-  }, [addFiles]);
+  }, [addFiles, choices]);
 
   const finished = !busy && items.length > 0;
   const done = items.filter((i) => i.status === "done").length;
@@ -192,17 +210,32 @@ export function PhotoDrop({ target }: { target: PhotoTarget }) {
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
           e.target.value = "";
-          void addFiles(files);
+          if (choices && files.length) setAsk({ id: Date.now(), files });
+          else void addFiles(files);
         }}
       />
 
       {over && (
         <div className="pd-ui photo-drop-zone" aria-hidden>
           <div>
-            <strong>Drop to add to {where}</strong>
-            <span>JPG, PNG or iPhone photos. You can drop several at once.</span>
+            <strong>{choices ? "Drop to add to this page" : `Drop to add to ${where}`}</strong>
+            <span>{choices ? "You'll be asked whether it's a memory, a child or the other parent." : "JPG, PNG or iPhone photos. You can drop several at once."}</span>
           </div>
         </div>
+      )}
+
+      {ask && choices && (
+        <DropChooser
+          key={ask.id}
+          choices={choices}
+          files={ask.files}
+          hint={ask.hint}
+          onMemory={(files) => void addFiles(files)}
+          onDone={(changed) => {
+            setAsk(null);
+            if (changed) router.refresh();
+          }}
+        />
       )}
 
       {items.length > 0 && (

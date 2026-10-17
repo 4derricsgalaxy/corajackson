@@ -8,6 +8,7 @@ import { RichText } from "@/components/ui/RichText";
 import { WixCanvas } from "@/components/wix/WixCanvas";
 import { FooterLabel, PageNav } from "@/components/wix/WixNav";
 import { PhotoSlider, type SliderPhoto } from "@/components/wix/PhotoSlider";
+import type { DropChoices } from "@/components/photos/DropChooser";
 import { PhotoDrop } from "@/components/photos/PhotoDrop";
 import { ChildrenStart } from "@/components/wix/person/ChildSlots";
 import { PersonChildren } from "@/components/wix/person/PersonChildren";
@@ -17,7 +18,7 @@ import { firstName } from "@/components/wix/person/parent-note";
 import { PROJECT } from "@/lib/cms/client";
 import { childrenAddedOn } from "@/lib/cms/edit-log";
 import { editorForPage } from "@/lib/cms/page-access";
-import { editableField, editablePage } from "@/lib/cms/sdk";
+import { editableField, editablePage, stegaClean } from "@/lib/cms/sdk";
 import { cropStyle } from "@/lib/content/crop";
 import { fullSrc } from "@/lib/content/image";
 import type { SiteImage } from "@/lib/content/types";
@@ -82,6 +83,22 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
   (person.gallery ?? []).forEach((img, i) => add(`g${i}`, img, { docId: person._id, field: "gallery" }, img.alt || undefined));
   tagged.forEach((p) => add(p._id, p.image, { docId: p._id, field: "" }, p.caption || p.title || undefined));
 
+  // a dropped photo is asked about first: a memory, a child's photo or the other parent's (the list's blocks and children)
+  const plain = (v?: string | null) => stegaClean(v ?? "") as string;
+  const choices: DropChoices | undefined = slotted
+    ? {
+        path,
+        first: plain(firstName(person)),
+        blocks: (person.families ?? []).map((f) => ({ key: f.key, role: plain(f.role), name: plain(f.name), hasPhoto: Boolean(f.photo) })),
+        kids: (person.families ?? []).flatMap((f) =>
+          f.children.flatMap(({ childId, photo }) => {
+            const kid = graph.byId.get(childId);
+            return kid ? [{ id: childId, name: plain(kid.title), block: f.key, hasPhoto: Boolean(photo) }] : [];
+          }),
+        ),
+      }
+    : undefined;
+
   const personStories = stories.filter((s) => s.authorId === person._id || s.peopleIds?.includes(person._id));
   // a child the slots may take off the page again: one added here with the slots (Edit log), whose entry holds nothing of its own yet
   const addedHere = editor ? await childrenAddedOn(editor, path) : new Set<string>();
@@ -120,7 +137,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
     <div className="wix-person-wrap" data-sbx-page={PROJECT} {...editablePage(pageDocuments)}>
       <Link href={up.href} className="wix-side-tab wix-person-side-tab" {...w("side-tab", up.label, "Side tab")} />
       {/* edit mode: drop photos anywhere on the page (or press Add photos) to add them to this person's Memories */}
-      {editing && <PhotoDrop target={{ kind: "person", id: person._id, name: person.title, first: firstName(person) }} />}
+      {editing && <PhotoDrop target={{ kind: "person", id: person._id, name: person.title, first: firstName(person) }} choices={choices} />}
       {slotted && solo && <ChildrenStart path={path} first={firstName(person)} />}
 
       <WixCanvas path={path} minHeight={560} className="wix-person">

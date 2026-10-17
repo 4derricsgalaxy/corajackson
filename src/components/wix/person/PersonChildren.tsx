@@ -139,7 +139,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
             )}
             <div className="wix-person-group-body">
               {block.partnerPhoto?.url && (
-                <span className="wix-person-partner" {...editableField(person._id, block.partnerField)} {...t(`partner-${keyPart(block.key)}`, undefined, `Photo: ${block.note?.name ?? "partner"}`)}>
+                <span className="wix-person-partner" data-drop-parent={slot?.key} {...editableField(person._id, block.partnerField)} {...t(`partner-${keyPart(block.key)}`, undefined, `Photo: ${block.note?.name ?? "partner"}`)}>
                   <CmsImage src={block.partnerPhoto} alt={block.partnerPhoto.alt || block.note?.name || ""} width={148} height={168} sizes="74px" />
                 </span>
               )}
@@ -147,7 +147,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
               {block.tiles.length > 0 || slot ? (
                 <ul className="wix-person-kids">
                   {block.tiles.map(({ child, image, edit, listed, pagePhoto }) => (
-                    <li key={child._id} {...t(`kidtile-${keyPart(child._id)}`, undefined, `Child: ${firstName(child)}`)}>
+                    <li key={child._id} data-drop-kid={slot && listed ? child._id : undefined} {...t(`kidtile-${keyPart(child._id)}`, undefined, `Child: ${firstName(child)}`)}>
                       <Link href={`/family/${child.slug}`} className="wix-person-kid">
                         {/* in edit mode the photo opens wherever it comes from: this member's list, or the child's own entry */}
                         <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)} {...t(`kidphoto-${keyPart(child._id)}`, undefined, `Child photo: ${firstName(child)}`)}>

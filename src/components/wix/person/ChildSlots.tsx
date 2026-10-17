@@ -15,15 +15,15 @@ import { HeicDecodeError, MAX_RAW_BYTES, PHOTO_ACCEPT, isHeicFile, preparePhoto 
  * Everything is saved by /api/family/children.
  */
 
-const ROLES = ["Mother", "Father", "Spouse", "Partner"];
+export const ROLES = ["Mother", "Father", "Spouse", "Partner"];
 /** the tiles are 99px wide and the other parent's frame 74px: 1200px is plenty, and keeps two pictures under the request limit */
 const SLOT_SIDE = 1200;
 
 type Fields = Record<string, string | Blob | undefined>;
-type Picked = { blob: Blob; name: string; preview: string };
+export type Picked = { blob: Blob; name: string; preview: string };
 
 /** a picked file -> an upright JPEG (or the HEIC original when this browser can't read it) + a local preview */
-async function pickPicture(file: File): Promise<Picked> {
+export async function pickPicture(file: File): Promise<Picked> {
   try {
     const p = await preparePhoto(file, SLOT_SIDE);
     return { blob: p.blob, name: p.name, preview: URL.createObjectURL(p.blob) };
@@ -36,7 +36,7 @@ async function pickPicture(file: File): Promise<Picked> {
   }
 }
 
-async function send(path: string, op: string, fields: Fields, verb: string) {
+export async function send(path: string, op: string, fields: Fields, verb: string) {
   const form = new FormData();
   form.set("path", path);
   form.set("op", op);
@@ -151,7 +151,7 @@ export function KidSlot({ path, block, first }: { path: string; block: string; f
       });
 
   return (
-    <li className="kid-slot">
+    <li className="kid-slot" data-drop-newkid={block}>
       <button type="button" className="kid-slot-photo" onClick={picker.open} disabled={save.busy} title="Pick this child's photo">
         <Thumb picked={photo.picked} getting={photo.getting} label={first ? "+ Child's photo" : "+ Next child"} className="kid-slot-thumb" />
       </button>
@@ -252,7 +252,7 @@ export function PartnerSlot({ path, block, filled }: { path: string; block: stri
   }));
   return (
     <>
-      <button type="button" className={filled ? "partner-slot-change" : "partner-slot"} onClick={picker.open} disabled={save.busy} title="The other parent's photo">
+      <button type="button" className={filled ? "partner-slot-change" : "partner-slot"} data-drop-parent={block} onClick={picker.open} disabled={save.busy} title="The other parent's photo">
         {save.busy ? "Saving…" : filled ? "Change" : "+ Their photo"}
       </button>
       {picker.el}
