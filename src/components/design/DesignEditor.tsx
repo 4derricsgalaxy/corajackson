@@ -313,7 +313,15 @@ export function DesignEditor() {
   useEffect(() => {
     if (!active) return;
     let hovered: Element | null = null;
-    const hit = (t: EventTarget | null) => (t instanceof Element ? t.closest<HTMLElement>("[data-pd-id], [data-pd]") : null);
+    // what a click picks: the nearest piece - but not a section that only holds other pieces (Portrait, facts and
+    // write-up; a Children group...) when the click lands on its empty space. Only real things - pictures, words,
+    // buttons - are picked and outlined; a whole section is still reachable with "Bigger piece".
+    const hit = (t: EventTarget | null) => {
+      const el = t instanceof Element ? t.closest<HTMLElement>("[data-pd-id], [data-pd]") : null;
+      if (!el || !(t instanceof Element) || el.hasAttribute("data-pd-id") || !el.querySelector("[data-pd], [data-pd-id]")) return el;
+      const content = t instanceof HTMLImageElement || t.matches("button, a, input, svg, svg *") || Array.from(t.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
+      return content ? el : null;
+    };
     const selOf = (el: HTMLElement): Sel => {
       const id = el.getAttribute("data-pd-id");
       if (id) return { kind: "added", id };
