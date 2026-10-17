@@ -153,7 +153,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                 </span>
               )}
               {slot && <PartnerSlot path={slot.path} block={slot.key} filled={Boolean(block.partnerPhoto?.url)} follow={`partner-${keyPart(block.key)}`} />}
-              {block.tiles.length > 0 || slot ? (
+              {block.tiles.length > 0 ? (
                 <ul className="wix-person-kids">
                   {block.tiles.map(({ child, image, edit, listed, pagePhoto }) => (
                     <li key={child._id} data-drop-kid={slot && listed ? child._id : undefined} {...t(`kidtile-${keyPart(child._id)}`, undefined, `Child: ${firstName(child)}`)}>
@@ -169,11 +169,18 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                       )}
                     </li>
                   ))}
-                  {/* the next empty slot: only ever one, and only in edit mode */}
-                  {slot && <KidSlot key={`slot-${block.tiles.length}`} path={slot.path} block={slot.key} first={block.tiles.length === 0} />}
+                  {/* the next empty slot: only ever one, and only in edit mode (it floats in the next free spot, taking no room) */}
+                  {slot && <KidSlot key={`slot-${block.tiles.length}`} path={slot.path} block={slot.key} first={false} />}
                 </ul>
               ) : (
-                <p className="wix-person-nokids" {...w(`nokids-${keyPart(block.key)}`, "No Children", "No Children")} />
+                <>
+                  <p className="wix-person-nokids" {...w(`nokids-${keyPart(block.key)}`, "No Children", "No Children")} />
+                  {slot && (
+                    <ul className="wix-person-kids wix-person-kids-none">
+                      <KidSlot key="slot-0" path={slot.path} block={slot.key} first />
+                    </ul>
+                  )}
+                </>
               )}
             </div>
           </div>

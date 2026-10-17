@@ -360,10 +360,17 @@ body {
 
 .wix-person-facts { float: right; box-sizing: border-box; width: 141px; margin: -1px 0 0; padding: 0 0 0 13px; }
 .wix-person-fact { margin: 0 0 15.8px; }
-.wix-person-fact:last-child { margin-bottom: 8px; }
+.wix-person-fact:last-of-type { margin-bottom: 8px; }
 .wix-person-fact dt { margin: 0; }
 .wix-person-fact dd { margin: 1.5px 0 0; overflow-wrap: break-word; }
-.wix-fact-empty { font-style: italic; opacity: .55; }
+/* edit mode: empty Born / Place / Life & Work as small chips floating under the facts (they take no room, so edit mode
+   is laid out exactly like the visitors' page); with no facts at all they float where the facts column would be */
+.wix-person-facts:has(> .wix-fact-adds) { position: relative; }
+.wix-fact-adds { position: absolute; z-index: 4; top: 100%; left: 13px; right: 0; display: flex; flex-wrap: wrap; gap: 4px; margin-top: -4px; }
+.wix-person-bio:has(> .wix-person-facts-none) { position: relative; }
+.wix-person-facts-none > .wix-fact-adds { top: 0; left: 165px; width: 128px; margin: 0; }
+.wix-fact-add { padding: 2px 7px; border: 1px dashed #2f6fed; border-radius: 5px; background: #f3f6fdee; color: #1d4fc4; font: 600 11px/1.3 system-ui, sans-serif; white-space: nowrap; cursor: pointer; }
+.wix-fact-add:hover { background: #e6edfc; }
 
 /* the write-up is one standard box on every page, modeled on Joanne's: under the portrait, exactly as wide as it (160px)
    and 327px tall. Longer text scrolls inside it with no visible scroll bar (mouse wheel, trackpad or swipe). */
@@ -510,11 +517,20 @@ body {
 .parent-slot-open, .parent-slot-form, .block-slot-open, .kid-slot { position: relative; z-index: 4; }
 .kid-tools { z-index: 5; }
 
-/* the Children list in edit mode, when its slots would run under the Memories strip: it scrolls, with a scroll bar you can see */
-.kid-slots-fit { overflow-y: auto; overflow-x: hidden; scrollbar-width: auto; scrollbar-color: #2f6fed #e6edfc; padding-bottom: 8px; box-shadow: inset 0 -14px 10px -12px #2f6fed66; }
-.kid-slots-fit::-webkit-scrollbar { width: 10px; }
-.kid-slots-fit::-webkit-scrollbar-thumb { background: #2f6fed; border-radius: 5px; }
-.kid-slots-fit::-webkit-scrollbar-track { background: #e6edfc; }
+/* wide screens: every slot control FLOATS - it takes no room, so edit mode is laid out exactly like the visitors' page
+   and Design moves land where they will show. The empty child slot sits in the next free spot of the grid (placed by
+   ChildSlots useNextSpot), "✎ Other parent" at the group's top right, "+ Children with another parent" right under
+   the last group; an opened form is a card over the page. Phones keep them in the list. */
+@media (min-width: 980px) {
+  .wix-person-group:not(.block-slot):has(> .parent-slot-open, > .parent-slot-form) { position: relative; }
+  .wix-person-group > .parent-slot-open { position: absolute; top: 0; right: 0; margin: 0; }
+  .wix-person-group > .parent-slot-form { position: absolute; z-index: 6; top: 0; right: 0; width: 300px; margin: 0; padding: 10px; border-radius: 8px; background: #fff; box-shadow: 0 6px 24px #0004; }
+  .wix-person-group:not(.block-slot) .wix-person-kids:has(> .kid-slot) { position: relative; }
+  .wix-person-group:not(.block-slot) .wix-person-kids > .kid-slot { position: absolute; }
+  .wix-person-kids-none { height: 0; margin-top: 0; }
+  .wix-person-children > .block-slot-open { position: absolute; }
+  .wix-person-children:not(.kid-slot-start) > .block-slot { position: absolute; z-index: 6; left: 0; width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; background: rgb(255 255 255 / .97); box-shadow: 0 6px 24px #0004; }
+}
 
 /* "+ Add children" on a page with none yet: above "Add photos" */
 .pd-ui.children-add-launch { position: fixed; z-index: 2147483000; right: 16px; bottom: 112px; height: 40px; padding: 0 16px; border-radius: 8px; border: 0; background: #12805c; color: #fff; font-weight: 600; box-shadow: 0 4px 16px #0004; cursor: pointer; }
@@ -534,17 +550,17 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 .wix-person-cols:has(+ .wix-person-memories) { min-height: 546px; }
 .wix-person-memories { margin-top: 2px; }
 .wix-person-memories-h { margin: 0; text-align: center; padding-right: 30px; }
-/* edit mode only: stands in for the Memories strip on a page with no photos */
+/* edit mode only, on a page with no photos: floats just above the nav (takes no room: edit mode = the visitors' layout) */
+.wix-person-navband:has(> .wix-add-photos) { position: relative; }
 .wix-add-photos {
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  width: 761px; max-width: calc(100% - 36px); margin: 19px auto 0; padding: 22px 16px; box-sizing: border-box;
-  border: 2px dashed #2f6fed; border-radius: 10px; background: rgb(255 255 255 / 0.85);
-  font: 400 14px/1.4 Arial, Helvetica, sans-serif; color: #333; text-align: center; cursor: pointer;
+  position: absolute; z-index: 4; bottom: 100%; left: 50%; translate: -50% -8px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 520px; max-width: calc(100% - 36px); padding: 8px 14px; box-sizing: border-box;
+  border: 2px dashed #2f6fed; border-radius: 10px; background: rgb(255 255 255 / 0.9);
+  font: 400 13px/1.35 Arial, Helvetica, sans-serif; color: #333; text-align: center; cursor: pointer;
 }
 .wix-add-photos:hover { background: #eef3fe; }
-.wix-add-photos strong { font-size: 17px; color: #1d4fc4; }
-.wix-add-photos-plus { font: 300 34px/1 Arial, sans-serif; color: #2f6fed; }
-.wix-add-photos-note { font-size: 12px; color: #777; }
+.wix-add-photos strong { font-size: 15px; color: #1d4fc4; }
 
 .wix-slider {
   position: relative;
@@ -1260,9 +1276,8 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 html.pd-editing body { padding-top: 48px; user-select: none; }
 /* while designing, the page is exactly what visitors see: no editor-only "Click to add" facts or "Add photos" box,
    which make the page taller in edit mode (moves made against that taller page landed wrong for visitors) */
-html.pd-editing .wix-person-fact:has(.wix-fact-empty), html.pd-editing .wix-person-memories:has(.wix-add-photos) { display: none !important; }
+html.pd-editing .wix-fact-adds, html.pd-editing .wix-add-photos { display: none !important; }
 /* (the last fact still showing keeps the last fact's smaller gap, as for visitors) */
-html.pd-editing .wix-person-fact.wix-fact-last-filled { margin-bottom: 8px; }
 html.pd-editing [data-pd], html.pd-editing [data-pd-id] { cursor: move; touch-action: none; }
 html.pd-editing .pd-hover { outline: 1px dashed #2f6fed !important; outline-offset: 1px; }
 html.pd-editing .pd-ghost { visibility: visible !important; opacity: .3 !important; outline: 2px dashed #dc2626 !important; }

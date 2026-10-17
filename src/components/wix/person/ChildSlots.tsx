@@ -150,8 +150,9 @@ export function KidSlot({ path, block, first }: { path: string; block: string; f
         photo.clear();
       });
 
+  const spot = useNextSpot();
   return (
-    <li className="kid-slot" data-drop-newkid={block}>
+    <li className="kid-slot" data-drop-newkid={block} ref={spot}>
       <button type="button" className="kid-slot-photo" onClick={picker.open} disabled={save.busy} title="Pick this child's photo">
         <Thumb picked={photo.picked} getting={photo.getting} label={first ? "+ Child's photo" : "+ Next child"} className="kid-slot-thumb" />
       </button>
@@ -174,6 +175,40 @@ export function KidSlot({ path, block, first }: { path: string; block: string; f
       <Problem text={photo.error || save.error} />
     </li>
   );
+}
+
+/**
+ * On a wide screen the empty slot floats (it takes no room, so the page is laid out as visitors see it) in the spot the
+ * next child will take: the next free cell of the 3-across grid, or the start of a new row under the last one.
+ * Phones keep it in the list (CSS).
+ */
+function useNextSpot() {
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    const li = ref.current;
+    const ul = li?.parentElement;
+    if (!li || !ul) return;
+    const place = () => {
+      const cs = getComputedStyle(ul);
+      const cols = cs.gridTemplateColumns.split(" ").map((v) => parseFloat(v) || 0);
+      const colGap = parseFloat(cs.columnGap) || 0, rowGap = parseFloat(cs.rowGap) || 0;
+      const tiles = Array.from(ul.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c !== li && !c.classList.contains("kid-slot"));
+      const n = tiles.length, per = Math.max(1, cols.length), col = n % per, row = Math.floor(n / per);
+      let top = 0;
+      if (row * per < n) top = tiles[row * per].offsetTop;
+      else if (n) {
+        const last = tiles.slice((row - 1) * per);
+        top = Math.max(...last.map((t) => t.offsetTop + t.offsetHeight)) + rowGap;
+      }
+      li.style.left = `${cols.slice(0, col).reduce((a, b) => a + b + colGap, 0)}px`;
+      li.style.top = `${top}px`;
+    };
+    place();
+    const sizes = new ResizeObserver(place);
+    sizes.observe(ul);
+    return () => sizes.disconnect();
+  }, []);
+  return ref;
 }
 
 /** the ✎ on a child already on the page: their photo here, their name, or (if added by mistake) take them off */
@@ -445,14 +480,11 @@ export function ChildrenStart({ path, first }: { path: string; first: string }) 
 }
 
 /**
- * The slot controls sit in the page's normal flow, but the Design tool moves pieces only visually (a `translate`).
- * Each control names the piece it belongs to (`data-follow` = its data-pd key: the child's photo, the other
- * parent's note or photo, the last group) and takes over that piece's move, so it stays on it instead of being
- * left behind under some other moved piece.
- *
- * It also keeps the Children list (with its slots) out from under the Memories strip. The slots make the list taller in
- * edit mode, and on a page whose Design moved Memories up (Derrick's) the last groups slid underneath it; the list
- * now stops just above Memories and scrolls inside. Off while Design is open, on phones, and when it already fits.
+ * The slot controls float where their piece is laid out, but the Design tool moves pieces only visually (a
+ * `translate`). Each control names the piece it belongs to (`data-follow` = its data-pd key: the child's photo, the
+ * other parent's note or photo, the last group) and takes over that piece's move, so it stays on it instead of being
+ * left behind under some other moved piece. (The list never scrolls or clips in edit mode: it is laid out exactly
+ * as visitors see it, and the floating controls sit above everything.)
  */
 export function ChildrenFit() {
   useEffect(() => {
@@ -461,17 +493,6 @@ export function ChildrenFit() {
         const piece = document.querySelector(`[data-pd="${CSS.escape(el.dataset.follow ?? "")}"]`);
         const moved = piece ? getComputedStyle(piece).translate : "none";
         el.style.translate = moved && moved !== "none" ? moved : "";
-      }
-      const list = document.querySelector<HTMLElement>(".wix-person-children");
-      if (!list) return;
-      list.style.maxHeight = "";
-      list.classList.remove("kid-slots-fit");
-      const memories = document.querySelector<HTMLElement>(".wix-person-memories");
-      if (!memories || window.innerWidth < 980 || document.documentElement.classList.contains("pd-editing")) return;
-      const room = Math.floor(memories.getBoundingClientRect().top - list.getBoundingClientRect().top - 10);
-      if (room > 150 && list.scrollHeight > room) {
-        list.style.maxHeight = `${room}px`;
-        list.classList.add("kid-slots-fit");
       }
     };
     let frame = 0;
@@ -501,8 +522,6 @@ export function ChildrenFit() {
       groups.disconnect();
       window.removeEventListener("resize", later);
       window.removeEventListener("load", later);
-      const el = document.querySelector<HTMLElement>(".wix-person-children");
-      if (el) el.style.maxHeight = "";
     };
   }, []);
   return null;

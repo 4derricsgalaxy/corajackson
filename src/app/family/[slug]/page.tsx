@@ -195,20 +195,15 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
               <PhotoSlider photos={memories} label={`Photos of ${person.title}`} piece={t("memories-strip")} />
             </section>
           )}
-          {/* edit mode only: a page with no photos gets a box that opens this member's Extra Memories photos */}
-          {memories.length === 0 && editing && (
-            <section className="wix-person-memories" aria-label="Add photos">
-              <h2 className="wix-strong wix-person-memories-h" {...w("memories-heading", "Memories:")} />
-              <div className="wix-add-photos" {...editableField(person._id, "gallery")}>
-                <span className="wix-add-photos-plus" aria-hidden>+</span>
-                <strong>Add photos</strong>
-                <span>No photos on this page yet. Drag photos anywhere onto this page, or press <b>Add photos</b> (bottom right).</span>
-                <span className="wix-add-photos-note">Only editors see this box.</span>
-              </div>
-            </section>
-          )}
-
           <div className="wix-person-navband">
+            {/* edit mode only: a page with no photos gets a box that opens this member's Extra Memories photos. It floats
+                just above the nav and takes no room, so edit mode is laid out exactly like the page visitors see. */}
+            {memories.length === 0 && editing && (
+              <div className="wix-add-photos" {...editableField(person._id, "gallery")}>
+                <strong>+ Add photos</strong>
+                <span>No photos yet: drag photos onto this page, or press <b>Add photos</b> (bottom right). Only editors see this.</span>
+              </div>
+            )}
             {personStories.length > 0 && (
               <section className="wix-person-stories" aria-labelledby="wix-person-stories-h" {...t("stories")}>
                 <h2 id="wix-person-stories-h" className="wix-strong" {...w("stories-heading", "Stories:")} />
