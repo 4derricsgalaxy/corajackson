@@ -90,7 +90,67 @@ function withLook(d: Design, sel: Sel, patch: Partial<Added>): Design {
   return d;
 }
 
-function readClip(): { from: string; items: Added[] } | null {
+/**
+ * where a thing really shows: a box holding pieces is drawn around those pieces wherever they were moved to (plus
+ * its own pictures and words, and its own fill or border), not around the spot the box was laid out in
+ */
+function visualRect(el: HTMLElement): { left: number; top: number; right: number; bottom: number } | null {
+  if (!el.querySelector("[data-pd], [data-pd-id]")) {
+    const r = el.getBoundingClientRect();
+    return r.width || r.height ? r : null;
+  }
+  const rects: { left: number; top: number; right: number; bottom: number }[] = [];
+  const cs = getComputedStyle(el);
+  if ((cs.backgroundColor !== "rgba(0, 0, 0, 0)" && cs.backgroundColor !== "transparent") || cs.backgroundImage !== "none" || parseFloat(cs.borderTopWidth) > 0) rects.push(el.getBoundingClientRect());
+  const walk = (node: Element) => {
+    for (const child of Array.from(node.children)) {
+      if (!(child instanceof HTMLElement) || child.closest(".pd-ui")) continue;
+      if (child.matches("[data-pd], [data-pd-id]")) {
+        const r = visualRect(child);
+        if (r) rects.push(r);
+      } else if (child instanceof HTMLImageElement || child.matches("svg") || Array.from(child.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim())) {
+        const r = child.getBoundingClientRect();
+        if (r.width || r.height) rects.push(r);
+        walk(child);
+      } else walk(child);
+    }
+  };
+  walk(el);
+  if (!rects.length) return null;
+  return {
+    left: Math.min(...rects.map((r) => r.left)), top: Math.min(...rects.map((r) => r.top)),
+    right: Math.max(...rects.map((r) => r.right)), bottom: Math.max(...rects.map((r) => r.bottom)),
+  };
+}
+const inRect = (r: ReturnType<typeof visualRect>, x: number, y: number) => Boolean(r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom);
+function placeBox(f: HTMLElement, r: ReturnType<typeof visualRect>) {
+  f.style.display = r ? "block" : "none";
+  if (r) Object.assign(f.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.right - r.left}px`, height: `${r.bottom - r.top}px` });
+}
+
+/**
+ * a box whose pieces have all been moved the same way (a child's photo and name, every part of a Children group)
+ * takes that move itself, so the box travels with what is in it instead of staying behind empty (still clickable
+ * and in the way). Looks the same: moves are shifts, and a shifted box shifts everything in it. Innermost boxes first.
+ */
+function foldMoves(d: Design): Design {
+  const depth = (el: Element) => { let n = 0; for (let p = el.parentElement; p; p = p.parentElement) n++; return n; };
+  const boxes = Array.from(document.querySelectorAll<HTMLElement>("[data-pd]")).filter((el) => el.querySelector("[data-pd]")).sort((a, b) => depth(b) - depth(a));
+  let out = d;
+  for (const box of boxes) {
+    const key = box.getAttribute("data-pd")!;
+    const kids = Array.from(box.querySelectorAll<HTMLElement>("[data-pd]")).filter((el) => el.parentElement?.closest("[data-pd]") === box);
+    const moves = kids.map((el) => out.items[el.getAttribute("data-pd")!] ?? {});
+    const x = moves[0]?.x ?? 0, y = moves[0]?.y ?? 0;
+    if (!kids.length || (!x && !y) || moves.some((m) => (m.x ?? 0) !== x || (m.y ?? 0) !== y)) continue;
+    const own = out.items[key] ?? {};
+    out = withLook(out, { kind: "piece", key }, { x: (own.x ?? 0) + x || undefined, y: (own.y ?? 0) + y || undefined });
+    for (const el of kids) out = withLook(out, { kind: "piece", key: el.getAttribute("data-pd")! }, { x: undefined, y: undefined });
+  }
+  return out;
+}
+
+function readClip():{ from: string; items: Added[] } | null {
   try {
     const raw = window.localStorage.getItem(CLIP_KEY);
     return raw ? (JSON.parse(raw) as { from: string; items: Added[] }) : null;
@@ -150,6 +210,9 @@ export function DesignEditor() {
   const [more, setMore] = useState<Sel[]>([]);
   const moreRef = useRef<Sel[]>([]);
   const extraFrames = useRef<HTMLDivElement>(null);
+  // what the pointer is over: outlined like the selection (around where it shows, not where it was laid out)
+  const hoverBox = useRef<HTMLDivElement>(null);
+  const hoverRef = useRef<HTMLElement | null>(null);
   const drag = useRef<null | {
     pointerId: number; sx: number; sy: number; moved: boolean; sel: Sel; mode: "move" | Handle;
     x0: number; y0: number; w0: number; h0: number; k: number; ratio: number; clickTarget?: Element | null;
@@ -241,25 +304,17 @@ export function DesignEditor() {
       const box = overlay.current;
       const el = selEl(selRef.current);
       if (box) {
-        if (el && selRef.current?.kind !== "page") {
-          const r = el.getBoundingClientRect();
-          box.style.display = "block";
-          box.style.left = `${r.left}px`;
-          box.style.top = `${r.top}px`;
-          box.style.width = `${r.width}px`;
-          box.style.height = `${r.height}px`;
-        } else box.style.display = "none";
+        placeBox(box, el && selRef.current?.kind !== "page" ? visualRect(el) ?? el.getBoundingClientRect() : null);
       }
       // one thinner frame per Ctrl+click extra (rendered in the same order as moreRef)
       const frames = extraFrames.current?.children;
       if (frames) {
         for (let i = 0; i < frames.length; i++) {
-          const f = frames[i] as HTMLElement;
-          const r = selEl(moreRef.current[i] ?? null)?.getBoundingClientRect();
-          f.style.display = r ? "block" : "none";
-          if (r) Object.assign(f.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+          const el = selEl(moreRef.current[i] ?? null);
+          placeBox(frames[i] as HTMLElement, el ? visualRect(el) ?? el.getBoundingClientRect() : null);
         }
       }
+      if (hoverBox.current) placeBox(hoverBox.current, hoverRef.current && !drag.current ? visualRect(hoverRef.current) : null);
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
@@ -329,14 +384,15 @@ export function DesignEditor() {
   /* ---------- pointer + keyboard on the page ---------- */
   useEffect(() => {
     if (!active) return;
-    let hovered: Element | null = null;
     // what a click picks: the nearest piece - but not a section that only holds other pieces (Portrait, facts and
     // write-up; a Children group...) when the click lands on its empty space. Only real things - pictures, words,
     // buttons - are picked and outlined; a whole section is still reachable with "Bigger piece".
     const hit = (t: EventTarget | null) => {
       const el = t instanceof Element ? t.closest<HTMLElement>("[data-pd-id], [data-pd]") : null;
       if (!el || !(t instanceof Element) || el.hasAttribute("data-pd-id") || !el.querySelector("[data-pd], [data-pd-id]")) return el;
-      const content = t instanceof HTMLImageElement || t.matches("button, a, input, svg, svg *") || Array.from(t.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
+      // (a link or button wrapped around pieces - a child's tile around its photo and name - is not content: once
+      // those pieces are moved away its empty spot must not pick the box)
+      const content = !t.querySelector("[data-pd], [data-pd-id]") && (t instanceof HTMLImageElement || t.matches("button, a, input, svg, svg *") || Array.from(t.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim()));
       return content ? el : null;
     };
     const selOf = (el: HTMLElement): Sel => {
@@ -411,7 +467,10 @@ export function DesignEditor() {
       }
       // pressing inside a selected thing drags it (and everything selected with it); a click without moving
       // then picks just what is under the pointer
-      const holder = group().find((x) => e.target instanceof Node && selEl(x)?.contains(e.target));
+      const holder = group().find((x) => {
+        const xel = selEl(x);
+        return e.target instanceof Node && xel?.contains(e.target) && inRect(visualRect(xel), e.clientX, e.clientY);
+      });
       if (holder) {
         startDrag(e, holder, "move", el);
         return;
@@ -431,11 +490,7 @@ export function DesignEditor() {
       if (!d || e.pointerId !== d.pointerId) {
         if (!d) {
           const el = hit(e.target);
-          if (el !== hovered) {
-            hovered?.classList.remove("pd-hover");
-            if (el && !inUi(e.target)) el.classList.add("pd-hover");
-            hovered = el;
-          }
+          hoverRef.current = el && !inUi(e.target) ? el : null;
         }
         return;
       }
@@ -485,6 +540,7 @@ export function DesignEditor() {
       const d = drag.current;
       if (!d || e.pointerId !== d.pointerId) return;
       drag.current = null;
+      if (d.moved && d.mode === "move") designStore.live(foldMoves(designStore.get().design));
       if (!d.moved && d.clickTarget) {
         select(selOf(d.clickTarget as HTMLElement));
       }
@@ -529,7 +585,7 @@ export function DesignEditor() {
           d = withLook(d, cur, { x: (look.x ?? 0) + delta[0] || undefined, y: (look.y ?? 0) + delta[1] || undefined });
         }
       }
-      commit(d);
+      commit(foldMoves(d));
     };
     // Ctrl+V: a picture copied from anywhere is uploaded and placed; else the Design tool's own clipboard
     const onPaste = (e: ClipboardEvent) => {
@@ -563,7 +619,7 @@ export function DesignEditor() {
       window.removeEventListener("dblclick", onDbl, true);
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("paste", onPaste);
-      hovered?.classList.remove("pd-hover");
+      hoverRef.current = null;
     };
     // addPicture is stable enough (reads the store); listing it would re-bind every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -749,6 +805,7 @@ export function DesignEditor() {
       <div ref={overlay} className="pd-ui pd-frame" aria-hidden>
         {sel?.kind !== "page" && !more.length && HANDLES.map((h) => <span key={h} className={`pd-handle pd-h-${h}`} data-pd-handle={h} />)}
       </div>
+      <div ref={hoverBox} className="pd-ui pd-frame pd-hoverbox" aria-hidden />
       <div ref={extraFrames} aria-hidden>
         {more.map((m, i) => <div key={i} className="pd-ui pd-frame pd-frame-extra" />)}
       </div>

@@ -1292,6 +1292,7 @@ html.pd-editing .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-on
 .pd-menu-list { position: absolute; top: 34px; left: 0; display: flex; flex-direction: column; gap: 4px; padding: 6px; background: #262626; border-radius: 8px; box-shadow: 0 8px 24px #0008; z-index: 1; }
 .pd-frame { position: fixed; z-index: 2147482990; display: none; pointer-events: none; outline: 2px solid #2f6fed; }
 .pd-frame-extra { outline: 2px dashed #2f6fed; }
+.pd-hoverbox { outline: 1px dashed #2f6fed; outline-offset: 1px; }
 .pd-multi { margin: 0 0 10px; }
 .pd-handle { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #fff; border: 2px solid #2f6fed; border-radius: 3px; pointer-events: auto; box-sizing: border-box; }
 .pd-h-nw { left: 0; top: 0; cursor: nwse-resize; }
