@@ -28,11 +28,13 @@ export function PersonFacts({ person, editing, design }: Props) {
   if (!pairs.length) return null;
   const t = pd();
   const w = pdWords(design);
+  // while designing, the empty ones are hidden (as for visitors): this one is then the last fact on the page
+  const lastFilled = pairs.findLast((p) => p.value)?.field;
 
   return (
     <dl className="wix-person-facts" {...t("facts")}>
       {pairs.map((p) => (
-        <div key={p.field} className="wix-person-fact" {...t(`fact-${p.field}`)}>
+        <div key={p.field} className={p.field === lastFilled ? "wix-person-fact wix-fact-last-filled" : "wix-person-fact"} {...t(`fact-${p.field}`)}>
           <dt className="wix-label" {...w(`label-${p.field}`, p.label, `Label: ${p.label.replace(/:$/, "")}`)} />
           <dd className="wix-value" {...editableField(p.docId ?? person._id, p.field)}>
             {p.value || <span className="wix-fact-empty">{EMPTY}</span>}

@@ -1254,6 +1254,11 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 
 /* ---------- Design tool (edit mode only; components/design/DesignEditor.tsx) ---------- */
 html.pd-editing body { padding-top: 48px; user-select: none; }
+/* while designing, the page is exactly what visitors see: no editor-only "Click to add" facts or "Add photos" box,
+   which make the page taller in edit mode (moves made against that taller page landed wrong for visitors) */
+html.pd-editing .wix-person-fact:has(.wix-fact-empty), html.pd-editing .wix-person-memories:has(.wix-add-photos) { display: none !important; }
+/* (the last fact still showing keeps the last fact's smaller gap, as for visitors) */
+html.pd-editing .wix-person-fact.wix-fact-last-filled { margin-bottom: 8px; }
 html.pd-editing [data-pd], html.pd-editing [data-pd-id] { cursor: move; touch-action: none; }
 html.pd-editing .pd-hover { outline: 1px dashed #2f6fed !important; outline-offset: 1px; }
 html.pd-editing .pd-ghost { visibility: visible !important; opacity: .3 !important; outline: 2px dashed #dc2626 !important; }
