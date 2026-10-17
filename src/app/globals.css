@@ -339,7 +339,10 @@ body {
 @media (min-width: 980px) {
   .wix-canvas.wix-person { min-height: 857px !important; }
   .wix-person-cols, .wix-person-cols:has(+ .wix-person-memories) { height: auto; min-height: 546px; }
-  .wix-person-right { align-self: stretch; min-height: 546px; contain: size; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+  .wix-person-right { align-self: stretch; min-height: 546px; contain: size; }
+  /* it scrolls only when its list is longer than the column (person/ChildrenScroll.tsx); otherwise nothing is clipped,
+     so pieces moved out of it with Design show in full */
+  .wix-person-right.wix-person-right-scroll { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
 }
 
 .wix-person-placeholder {

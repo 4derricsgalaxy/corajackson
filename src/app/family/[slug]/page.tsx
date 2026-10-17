@@ -11,6 +11,7 @@ import { PhotoSlider, type SliderPhoto } from "@/components/wix/PhotoSlider";
 import type { DropChoices } from "@/components/photos/DropChooser";
 import { PhotoDrop } from "@/components/photos/PhotoDrop";
 import { ChildrenStart } from "@/components/wix/person/ChildSlots";
+import { ChildrenScroll } from "@/components/wix/person/ChildrenScroll";
 import { PersonChildren } from "@/components/wix/person/PersonChildren";
 import { PersonFacts } from "@/components/wix/person/PersonFacts";
 import { PersonPortrait } from "@/components/wix/person/PersonPortrait";
@@ -184,6 +185,7 @@ export default async function PersonPage({ params }: { params: Promise<{ slug: s
 
             <div className="wix-person-right" {...t("children")}>
               <PersonChildren person={person} byId={graph.byId} assets={assets} design={design} slots={slotted ? { path, removable } : undefined} />
+              <ChildrenScroll />
             </div>
           </div>
 
