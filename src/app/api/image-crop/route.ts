@@ -67,6 +67,17 @@ export async function POST(req: NextRequest) {
   const fieldValue = doc?.result?.[field];
   const list = listed && Array.isArray(fieldValue) ? (structuredClone(fieldValue) as unknown[]) : null;
   const spot = list && item ? locate(list, item, typeof body?.src === "string" ? body.src : "") : null;
+  // a child with no photo of their own on this page shows their own picture: cropping it here gives this page
+  // its own copy, so the child's page (and its crop) stays as it is
+  const kidId = item?.split(":")[2];
+  if (spot && kidId && !spot.holder[spot.key] && DOC_RE.test(kidId)) {
+    const kid = await fetch(`${api}/doc/${encodeURIComponent(kidId)}`, { headers: auth, cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ result?: Record<string, unknown> }>) : null))
+      .catch(() => null);
+    const has = (v: unknown): v is Record<string, unknown> => Boolean(v && typeof v === "object" && typeof (v as { _ref?: unknown })._ref === "string");
+    const own = [kid?.result?.treePhoto, kid?.result?.portrait].find(has);
+    if (own) spot.holder[spot.key] = { ...own };
+  }
   const value = listed ? spot?.holder[spot.key] : fieldValue;
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return NextResponse.json({ error: listed ? "This picture was changed since the page opened. Reload the page, then crop again." : "That entry has no picture in this spot to crop." }, { status: listed ? 409 : 404 });

@@ -68,7 +68,9 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
       if (!child || listed.has(childId)) return [];
       listed.add(childId);
       const custom = resolveImage(photo, assets);
-      return [{ ...(custom ? { child, image: custom, edit: { docId: person._id, field: "families" } } : ownPhoto(child)), listed: true, pagePhoto: Boolean(custom) }];
+      // a listed child's photo here always belongs to THIS page's list: with no photo of its own yet it shows the
+      // child's picture, and editing or cropping it gives this page its own copy (the child's page keeps theirs)
+      return [{ child, image: custom ?? ownPhoto(child).image, edit: { docId: person._id, field: "families" }, listed: true, pagePhoto: Boolean(custom) }];
     });
     const note = family.name
       ? { role: family.role ?? (tiles.length ? "Parent" : "Partner"), name: family.name, status: family.status ? titleCase(family.status) : undefined }
@@ -159,7 +161,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
                     <li key={child._id} data-drop-kid={slot && listed ? child._id : undefined} {...t(`kidtile-${keyPart(child._id)}`, undefined, `Child: ${firstName(child)}`)}>
                       <Link href={`/family/${child.slug}`} className="wix-person-kid">
                         {/* in edit mode the photo opens wherever it comes from: this member's list, or the child's own entry */}
-                        <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)} {...cropItemAttr(pagePhoto && block.family ? `families:${block.family.key}:${child._id}` : undefined)} {...t(`kidphoto-${keyPart(child._id)}`, undefined, `Child photo: ${firstName(child)}`)}>
+                        <span className="wix-person-kid-photo" {...editableField(edit.docId, edit.field)} {...cropItemAttr(listed && block.family ? `families:${block.family.key}:${child._id}` : undefined)} {...t(`kidphoto-${keyPart(child._id)}`, undefined, `Child photo: ${firstName(child)}`)}>
                           <PersonPortrait image={image} name={child.title} width={99} height={121} />
                         </span>
                         <span className="wix-child-name wix-person-kid-name" {...editableField(child._id, child.nickname ? "nickname" : "title")} {...w(`kid-${keyPart(child._id)}`, firstName(child), `Child name: ${firstName(child)}`)} />
