@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (!ID_RE.test(targetId)) return NextResponse.json({ error: "This page can't take photos." }, { status: 400 });
   if (file.size > MAX_PICTURE_BYTES) return NextResponse.json({ error: "That picture is too big (over 4 MB)." }, { status: 413 });
 
-  // a family member adds photos to their own / their children's pages (or those family lines' albums)
+  // a family member adds photos to their own / their children's / grandchildren's pages (or those family lines' albums)
   try {
     const access = await pageAccess(editor.email);
     if (!mayChangeFor(access, targetId)) return NextResponse.json({ error: notYours(access) }, { status: 403 });

@@ -8,7 +8,7 @@ import { canonicalDesign, cleanDesign, designDocId, isEmptyDesign, parseDesign, 
 import { DESIGN_TYPE } from "@/lib/design/server";
 
 // The Design tool's save endpoint. Only a signed-in editor (requireEditor) can use it, and a Family member
-// only for their own and their children's pages (pageAccess); owners and team members for every page.
+// only for their own, their children's and their grandchildren's pages (pageAccess); owners and team members for every page.
 //   GET  ?path=/family/carlos        -> { design, history: [{ at, design }] }  (earlier saved versions)
 //   POST { path, design }             -> saves that page's design (design: null = back to the default format)
 //   POST { copyTo: [paths], design }  -> gives each of those pages this design
