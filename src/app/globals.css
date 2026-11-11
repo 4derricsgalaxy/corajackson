@@ -523,7 +523,7 @@ body {
    the last group; an opened form is a card over the page. Phones keep them in the list. */
 @media (min-width: 980px) {
   .wix-person-group:not(.block-slot):has(> .parent-slot-open, > .parent-slot-form) { position: relative; }
-  .wix-person-group > .parent-slot-open { position: absolute; top: 0; right: 0; margin: 0; }
+  .wix-person-group > .parent-slot-open { position: absolute; top: 0; right: 0; margin: 0; height: 16px; padding: 0 5px; font-size: 10px; line-height: 1; border-radius: 4px; }
   .wix-person-group > .parent-slot-form { position: absolute; z-index: 6; top: 0; right: 0; width: 300px; margin: 0; padding: 10px; border-radius: 8px; background: #fff; box-shadow: 0 6px 24px #0004; }
   .wix-person-group:not(.block-slot) .wix-person-kids:has(> .kid-slot) { position: relative; }
   .wix-person-group:not(.block-slot) .wix-person-kids > .kid-slot { position: absolute; }
