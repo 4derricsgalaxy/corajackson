@@ -733,7 +733,7 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
   .wix-person-left { width: 100%; }
   .wix-person-title { width: auto; max-width: none; font-size: 32px; line-height: 1.25; }
   .wix-person-bio { width: auto; margin-left: 0; }
-  .wix-person-facts { width: calc(100% - 152px); }
+  .wix-person-facts { width: calc(100% - 152px - 2 * var(--pd-portrait-border, 0px)); } /* (minus a Design border on the portrait) */
   .wix-person-right { margin-top: 8px; }
   .wix-person-children-h { margin: 18px 0 8px; }
   .wix-person-children-h + .wix-person-group { margin-top: 0; }
@@ -774,7 +774,7 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 }
 @media (max-width: 400px) {
   .wix-person-portrait .wix-person-photo { width: 140px; height: 188px; }
-  .wix-person-facts { width: calc(100% - 132px); }
+  .wix-person-facts { width: calc(100% - 132px - 2 * var(--pd-portrait-border, 0px)); }
 }
 /* touch devices swipe the strip; the chevrons would only cover photos */
 @media (hover: none) and (max-width: 979px) {

@@ -318,6 +318,10 @@ export function designCss(design: Design): string {
   const up = Math.max(0, ...["memories", "memories-heading", "memories-strip"].map((k) => -(design.items[k]?.y ?? 0)));
   if (up > 0) wide.push(`${sel("children")}{padding-bottom:${Math.round(up)}px !important;box-sizing:border-box !important}`);
   if (wide.length) out.push(`@media (min-width:980px){${wide.join("")}}`);
+  // a border on the portrait makes it wider: on phones the facts beside it are made that much narrower, so they stay
+  // beside the photo instead of dropping below it (globals.css, .wix-person-facts below 980px; desktop is unchanged)
+  const portraitBorder = design.items.portrait?.borderW;
+  if (portraitBorder) out.push(`.wix-person-bio{--pd-portrait-border:${portraitBorder}px}`);
   for (const a of design.added) {
     const s = `[data-pd-id="${a.id}"]`;
     const { self, text } = lookDecls(a, { geometry: false, added: true });
