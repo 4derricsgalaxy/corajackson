@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!slug) return NextResponse.json({ error: "Only a person's page keeps its background in Snackbox." }, { status: 400 });
 
   try {
-    const access = await pageAccess(editor.email);
+    const access = await pageAccess(editor.email, (a) => mayChange(a, path));
     if (!mayChange(access, path)) return NextResponse.json({ error: notYours(access) }, { status: 403 });
   } catch (err) {
     return NextResponse.json({ error: `Could not check which page is yours: ${(err as Error).message}` }, { status: 502 });
@@ -66,10 +66,10 @@ export async function POST(req: NextRequest) {
       actor: actorFor(editor, "Background"),
     }),
     cache: "no-store",
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    return NextResponse.json({ error: `Snackbox did not accept the change (${res.status}). ${detail.slice(0, 200)}` }, { status: 502 });
+  }).catch(() => null);
+  if (!res?.ok) {
+    if (res) console.warn("[background] Snackbox refused a change:", res.status, (await res.text().catch(() => "")).slice(0, 300));
+    return NextResponse.json({ error: res ? `Snackbox did not accept the change (it answered ${res.status}). Try again in a moment.` : "Snackbox didn't answer. Try again in a moment." }, { status: 502 });
   }
   revalidatePath("/", "layout");
   return NextResponse.json({ ok: true, previous });

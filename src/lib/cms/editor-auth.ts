@@ -28,10 +28,14 @@ export async function requireEditor(what: string): Promise<EditorWrite | NextRes
     redirect: "error",
     signal: AbortSignal.timeout(10_000),
   })
-    .then((r) => (r.ok ? (r.json() as Promise<{ ok?: boolean; email?: string }>) : null))
+    .then(async (r) => (r.ok ? ((await r.json()) as { ok?: boolean; email?: string }) : r.status === 401 || r.status === 403 ? { ok: false } : null))
     .catch(() => null);
-  if (!session?.ok) {
-    return NextResponse.json({ error: "Your edit session has expired. Reopen the page from Snackbox and try again." }, { status: 403 });
+  // Snackbox didn't answer (or had a hiccup): that is not a signed-out editor - nothing to sign in again for
+  if (session === null) {
+    return NextResponse.json({ error: `Snackbox didn't answer, so ${what} couldn't be saved. Try again in a moment (your changes are still on the page).` }, { status: 502 });
+  }
+  if (!session.ok) {
+    return NextResponse.json({ error: "Your edit session has expired. Sign in to Snackbox again in a new tab and open this page from there, then try again." }, { status: 403 });
   }
   return { api: `${cms}/api/v1/${project}`, project, auth: { Authorization: `Bearer ${writeToken}` }, email: session.email?.trim().toLowerCase() || undefined };
 }

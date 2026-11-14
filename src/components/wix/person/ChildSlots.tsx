@@ -30,13 +30,26 @@ export async function pickPicture(file: File): Promise<Picked> {
   } catch (err) {
     if (err instanceof HeicDecodeError || (await isHeicFile(file))) {
       if (file.size > MAX_RAW_BYTES) throw new Error("This iPhone photo is too big to use here. Save it as a JPG and try again.");
-      return { blob: file, name: /\.hei[cf]$/i.test(file.name) ? file.name : `${file.name || "photo"}.heic`, preview: "" };
+      const name = /\.hei[cf]$/i.test(file.name) ? file.name : `${file.name || "photo"}.heic`;
+      // (a File under that name, so the upload carries the .heic name the server recognises it by)
+      return { blob: new File([file], name, { type: file.type || "image/heic" }), name, preview: "" };
     }
     throw err;
   }
 }
 
-export async function send(path: string, op: string, fields: Fields, verb: string) {
+/** what a save answers: the group and/or child it made */
+export type Saved = { block?: string; child?: string };
+
+/** Saves on this page go one at a time (two at once could each change the same list, and one would be lost). */
+let queue: Promise<unknown> = Promise.resolve();
+export function send(path: string, op: string, fields: Fields, verb: string): Promise<Saved> {
+  const run = queue.then(() => sendNow(path, op, fields, verb));
+  queue = run.catch(() => undefined);
+  return run;
+}
+
+async function sendNow(path: string, op: string, fields: Fields, verb: string): Promise<Saved> {
   const form = new FormData();
   form.set("path", path);
   form.set("op", op);
@@ -51,8 +64,9 @@ export async function send(path: string, op: string, fields: Fields, verb: strin
   } catch (err) {
     throw new Error(plainError(err, verb));
   }
-  const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+  const out = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string } & Saved;
   if (!res.ok || !out.ok) throw new Error(out.error ?? failText(res.status, verb));
+  return { block: out.block, child: out.child };
 }
 
 /** one save at a time per slot, with its error in plain words; the page re-reads Snackbox afterwards
@@ -63,7 +77,7 @@ function useSave() {
   const [refreshing, startRefresh] = useTransition();
   const [error, setError] = useState("");
   const busy = saving || refreshing;
-  const run = async (job: () => Promise<void>) => {
+  const run = async (job: () => Promise<unknown>) => {
     setBusy(true);
     setError("");
     try {
@@ -276,6 +290,8 @@ export function KidTools({ path, child, name, hasPagePhoto, removable, follow, b
   const others = groups.filter((g) => g.key !== block);
   const [moveTo, setMoveTo] = useState(others[0]?.key ?? "new");
   const save = useSave();
+  const busyRef = useRef(false);
+  useEffect(() => { busyRef.current = save.busy; }, [save.busy]);
   const box = useRef<HTMLSpanElement>(null);
   const done = (ok: boolean) => { if (ok) setOpen(false); };
   const picker = usePicker((f) => void save.run(async () => {
@@ -287,9 +303,15 @@ export function KidTools({ path, child, name, hasPagePhoto, removable, follow, b
   // one menu at a time: a click anywhere else closes it
   useEffect(() => {
     if (!open) return;
-    const away = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    // (not while it is saving: its answer, or the reason it failed, shows in the menu)
+    const away = (e: PointerEvent) => { if (!busyRef.current && !box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape" && !busyRef.current) setOpen(false); };
     document.addEventListener("pointerdown", away);
-    return () => document.removeEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+    };
   }, [open]);
 
   return (
@@ -343,6 +365,7 @@ export function KidTools({ path, child, name, hasPagePhoto, removable, follow, b
           <Problem text={save.error} />
         </span>
       )}
+      {!open && save.error && <span className="kid-tools-error"><Problem text={save.error} /></span>}
     </span>
   );
 }
@@ -454,12 +477,21 @@ export function NewBlock({ path, starter, onCancel, follow }: { path: string; st
     onCancel?.();
   };
   const submit = () =>
-    void save.run(() =>
-      send(path, "block-new", {
-        role, name: name.trim(), status: status.trim(), parentPhoto: parentPhoto.picked?.blob,
-        childName: kid.trim(), childPhoto: kid.trim() ? kidPhoto.picked?.blob : undefined,
-      }, "save the children"),
-    );
+    void save
+      .run(() =>
+        send(path, "block-new", {
+          role, name: name.trim(), status: status.trim(), parentPhoto: parentPhoto.picked?.blob,
+          childName: kid.trim(), childPhoto: kid.trim() ? kidPhoto.picked?.blob : undefined,
+        }, "save the children"),
+      )
+      .then((ok) => {
+        if (!ok) return;
+        // the new group shows on the page; the card empties (and folds away, except on a page that had no children)
+        setRole(""); setName(""); setStatus(""); setKid("");
+        parentPhoto.clear();
+        kidPhoto.clear();
+        if (!starter) setOpen(false);
+      });
 
   return (
     <div className="wix-person-group block-slot">

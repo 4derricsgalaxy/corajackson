@@ -42,11 +42,13 @@ async function mcp<T>(tool: string, args: Record<string, unknown>): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-/** What this editor may change. Throws when Snackbox can't be asked (callers then refuse the change). */
-export async function pageAccess(email: string | undefined): Promise<Access> {
+/** What this editor may change. Throws when Snackbox can't be asked (callers then refuse the change).
+ *  `need`: what the caller is about to check - a remembered answer that says no is asked again, fresh (a child added a
+ *  minute ago is theirs right away, not after the few minutes the answer is remembered). */
+export async function pageAccess(email: string | undefined, need?: (access: Access) => boolean): Promise<Access> {
   if (!email) return { all: false, pages: [], ids: [] };
   const hit = cache.get(email);
-  if (hit && Date.now() - hit.at < TTL) return hit.access;
+  if (hit && Date.now() - hit.at < TTL && (!need || need(hit.access))) return hit.access;
 
   const members = await mcp<{ email?: string; role?: string }[]>("list_project_members", {});
   const role = members.find((m) => m.email?.toLowerCase() === email)?.role;
@@ -78,7 +80,7 @@ export async function editorForPage(path: string): Promise<EditorWrite | null> {
   const editor = await requireEditor("changes");
   if (editor instanceof NextResponse) return null;
   try {
-    return mayChange(await pageAccess(editor.email), path) ? editor : null;
+    return mayChange(await pageAccess(editor.email, (a) => mayChange(a, path)), path) ? editor : null;
   } catch {
     return null;
   }

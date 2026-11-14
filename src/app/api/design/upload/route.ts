@@ -21,10 +21,10 @@ export async function POST(req: NextRequest) {
   out.set("file", file, file.name || "picture");
   const alt = form?.get("alt");
   if (typeof alt === "string" && alt) out.set("alt", alt.slice(0, 300));
-  const res = await fetch(`${editor.api}/assets`, { method: "POST", headers: editor.auth, body: out, cache: "no-store" });
-  const json = (await res.json().catch(() => null)) as { result?: { id?: string; url?: string; srcset?: string; width?: number | null; height?: number | null } } | null;
-  if (!res.ok || !json?.result?.url) {
-    return NextResponse.json({ error: `Snackbox did not accept the picture (${res.status}).` }, { status: 502 });
+  const res = await fetch(`${editor.api}/assets`, { method: "POST", headers: editor.auth, body: out, cache: "no-store" }).catch(() => null);
+  const json = res ? ((await res.json().catch(() => null)) as { result?: { id?: string; url?: string; srcset?: string; width?: number | null; height?: number | null } } | null) : null;
+  if (!res?.ok || !json?.result?.url) {
+    return NextResponse.json({ error: res ? `Snackbox did not accept the picture (it answered ${res.status}). Try again in a moment.` : "Snackbox didn't answer. Try again in a moment." }, { status: 502 });
   }
   const { id, url, srcset, width, height } = json.result;
   // the Edit log notes who put the picture in the library (best effort: the upload itself already worked)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { emptyDesign, type Design } from "@/lib/design/model";
+import { cleanDesign, emptyDesign, type Design } from "@/lib/design/model";
 
 /**
  * The page's design on the client: what PageDesign renders and what the Design tool edits.
@@ -68,6 +68,16 @@ export const designStore = {
   markSaved(d: Design) {
     state = { ...state, saved: d, base: d };
     emit();
+  },
+  /** a Save went through: `server` is what Snackbox now holds (the server cleans what it is sent, so it can differ from
+   *  `sent`). When nothing changed on the page during the save, the page shows exactly that. Answers whether it differed. */
+  savedAs(sent: Design, server: Design): boolean {
+    // (compared after the same clean-up the server does, so only something really dropped or changed counts)
+    const differs = JSON.stringify(cleanDesign(sent)) !== JSON.stringify(cleanDesign(server));
+    // (the same design object stays on the page when nothing differs, so nothing on it re-renders)
+    state = { ...state, saved: differs ? server : sent, base: server, design: differs && state.design === sent ? server : state.design };
+    emit();
+    return differs;
   },
   /** take a tidied copy that looks the same as the saved design without calling it an unsaved change
    * (it is written with the next Save; `base` stays what the CMS holds) */

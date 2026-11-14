@@ -99,7 +99,12 @@ const TAG_RE = /^<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/;
 const ATTR_RE = /([^\s"'>\/=]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
 
 export function sanitizeHtml(input: string, maxLen = 60_000): string {
-  const html = input.slice(0, maxLen);
+  let html = input.slice(0, maxLen);
+  if (input.length > maxLen) {
+    // cut at the end of the last whole tag: a tag cut in half would otherwise show on the page as text
+    const lt = html.lastIndexOf("<");
+    if (lt > html.lastIndexOf(">")) html = html.slice(0, lt);
+  }
   let out = "";
   let i = 0;
   let dropDepth = 0;

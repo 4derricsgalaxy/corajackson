@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { failText, plainError, sendJson } from "@/lib/net";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { cleanCrop, CROP_FIELDS, cropStyle, LIST_CROP_FIELDS, type ImageCrop } from "@/lib/content/crop";
@@ -102,6 +103,7 @@ export function CropDialog() {
   const [box, setBox] = useState<Box>({ x: 0, y: 0, w: 1, h: 1 });
   const [free, setFree] = useState(false); // false = the box keeps the frame's shape
   const [status, setStatus] = useState<{ kind: "idle" | "saving" | "error"; text?: string }>({ kind: "idle" });
+  const router = useRouter();
   const stage = useRef<HTMLDivElement>(null);
   const drag = useRef<Drag | null>(null);
 
@@ -220,7 +222,10 @@ export function CropDialog() {
       const res = await sendJson("/api/image-crop", { doc: target.doc, field: target.field, item: target.item, crop, src: target.src, size: { w: target.sw, h: target.sh } });
       const out = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) throw new Error(out.error ?? failText(res.status, "save the crop"));
-      window.location.reload();
+      // the page re-reads Snackbox in place (a reload threw away unsaved Design changes)
+      setTarget(null);
+      setStatus({ kind: "idle" });
+      router.refresh();
     } catch (err) {
       setStatus({ kind: "error", text: plainError(err, "save the crop") });
     }

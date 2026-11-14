@@ -2,7 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 import { requireEditor } from "@/lib/cms/editor-auth";
 import { actorFor, fromPage, logMutation } from "@/lib/cms/edit-log";
-import { mayChangeFor, notYours, pageAccess } from "@/lib/cms/page-access";
+import { mayChangeFor, notYours, pageAccess, type Access } from "@/lib/cms/page-access";
 import { cleanCrop, CROP_FIELDS, LIST_CROP_FIELDS } from "@/lib/content/crop";
 const DOC_RE = /^[A-Za-z0-9_.:-]{1,80}$/;
 const ITEM_RE = /^(families|gallery):[A-Za-z0-9_.:-]{1,160}$/;
@@ -54,10 +54,11 @@ export async function POST(req: NextRequest) {
     .catch(() => null);
   // a family member: pictures on their own / their children's entries, or photos tagged with one of them
   try {
-    const access = await pageAccess(editor.email);
     // (being tagged in it counts only for a Photos entry, not e.g. a Story that lists people)
     const tagged = doc?.result?._type === "photo" && Array.isArray(doc.result.people) ? (doc.result.people as { _ref?: string }[]).map((p) => p?._ref ?? "") : [];
-    if (!access.all && !mayChangeFor(access, docId) && !tagged.some((id) => mayChangeFor(access, id))) {
+    const allowed = (a: Access) => a.all || mayChangeFor(a, docId) || tagged.some((id) => mayChangeFor(a, id));
+    const access = await pageAccess(editor.email, allowed);
+    if (!allowed(access)) {
       return NextResponse.json({ error: notYours(access) }, { status: 403 });
     }
   } catch (err) {
@@ -108,10 +109,10 @@ export async function POST(req: NextRequest) {
       actor: actorFor(editor, "Crop"),
     }),
     cache: "no-store",
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    return NextResponse.json({ error: `Snackbox did not accept the change (${res.status}). ${detail.slice(0, 200)}` }, { status: 502 });
+  }).catch(() => null);
+  if (!res?.ok) {
+    if (res) console.warn("[crop] Snackbox refused a change:", res.status, (await res.text().catch(() => "")).slice(0, 300));
+    return NextResponse.json({ error: res ? `Snackbox did not accept the change (it answered ${res.status}). Try again in a moment.` : "Snackbox didn't answer. Try again in a moment." }, { status: 502 });
   }
   revalidatePath("/", "layout");
   return NextResponse.json({ ok: true });

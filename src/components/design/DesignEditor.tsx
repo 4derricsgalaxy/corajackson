@@ -24,6 +24,26 @@ import { failText, plainError, sendForm, sendJson } from "@/lib/net";
  * The page's own content (names, words, photos) is still changed in Snackbox; "Edit in Snackbox" jumps there.
  */
 
+/* ---------- unsaved changes kept in this browser (per page) ---------- */
+const UNSAVED = (path: string) => `cj-design-unsaved:${path}`;
+const UNSAVED_DAYS = 14;
+function keepUnsaved(path: string, base: Design, design: Design) {
+  try { localStorage.setItem(UNSAVED(path), JSON.stringify({ at: Date.now(), base, design })); } catch { /* storage full or off: nothing kept */ }
+}
+function dropUnsaved(path: string) {
+  try { localStorage.removeItem(UNSAVED(path)); } catch { /* storage off */ }
+}
+function readUnsaved(path: string): { base: Design; design: Design } | null {
+  try {
+    const kept = JSON.parse(localStorage.getItem(UNSAVED(path)) ?? "null") as { at?: number; base?: Design; design?: Design } | null;
+    if (!kept?.design || !kept.base || !Array.isArray(kept.design.added) || typeof kept.design.items !== "object") return null;
+    if (!kept.at || Date.now() - kept.at > UNSAVED_DAYS * 864e5) { dropUnsaved(path); return null; }
+    return { base: kept.base, design: cleanDesign(kept.design) };
+  } catch {
+    return null;
+  }
+}
+
 type Sel = { kind: "piece"; key: string } | { kind: "added"; id: string } | { kind: "page" } | null;
 type Picked = { src: string; srcset?: string; w?: number | null; h?: number | null; alt?: string; /** Snackbox asset, when known */ asset?: string };
 type Library = { pictures: { t: string; p: string[]; u: string; s?: string; w?: number | null; h?: number | null; a?: string }[]; pages: { path: string; title: string; group: string }[] };
@@ -270,6 +290,38 @@ export function DesignEditor() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // unsaved changes are also kept in this browser, so leaving the page any way at all (Back, a link, a swipe, a reload,
+  // a crash; iPhones never ask "leave this page?") doesn't lose them: they come back when the page is opened again.
+  // Only if nobody has saved this page since - otherwise they would quietly undo someone else's work.
+  const restoredFor = useRef("");
+  useEffect(() => {
+    if (!s.path || restoredFor.current === s.path || s.path !== window.location.pathname) return;
+    restoredFor.current = s.path;
+    const kept = readUnsaved(s.path);
+    if (!kept) return;
+    if (JSON.stringify(kept.base) !== JSON.stringify(designStore.get().base)) {
+      dropUnsaved(s.path);
+      window.setTimeout(() => setStatus({ kind: "error", text: "Design changes you didn't save earlier were dropped: someone has saved this page since." }), 0);
+      return;
+    }
+    if (isDirty(designStore.get())) return;
+    designStore.commit(kept.design);
+    window.setTimeout(() => setStatus({ kind: "error", text: "Your unsaved Design changes from earlier are back on this page. Press Save to keep them, or Undo to drop them." }), 0);
+  }, [s.path]);
+  useEffect(() => {
+    if (!s.path || restoredFor.current !== s.path) return;
+    const t = window.setTimeout(() => (isDirty(s) ? keepUnsaved(s.path, s.base, s.design) : dropUnsaved(s.path)), 300);
+    return () => window.clearTimeout(t);
+  }, [s]);
+  // a "Saved" (or "Copied") message goes away at the next change, so it never sits beside a Save that needs pressing
+  const lastDesign = useRef(s.design);
+  useEffect(() => {
+    if (lastDesign.current === s.design) return;
+    lastDesign.current = s.design;
+    const t = window.setTimeout(() => setStatus((st) => (st.kind === "ok" ? { kind: "idle" } : st)), 0);
+    return () => window.clearTimeout(t);
+  }, [s.design]);
 
   // unsaved changes: ask before leaving the page
   useEffect(() => {
@@ -583,6 +635,8 @@ export function DesignEditor() {
 
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e.target)) return;
+      // a dialog is open (pictures, crop, copy, versions): its own keys only, nothing happens to the page behind it
+      if (document.querySelector(".pd-modal, .ic-modal, .drop-ask-backdrop")) return;
       const mod = e.ctrlKey || e.metaKey;
       const k = e.key.toLowerCase();
       if (mod && k === "z" && !e.shiftKey) { designStore.undo(); e.preventDefault(); return; }
@@ -718,8 +772,11 @@ export function DesignEditor() {
         return;
       }
       if (!res.ok) throw new Error(out.error ?? failText(res.status, "save"));
-      designStore.markSaved(design);
-      setStatus({ kind: "ok", text: "Saved. Visitors see it now." });
+      const kept = out.design === undefined ? design : (out.design ?? emptyDesign());
+      const changed = designStore.savedAs(design, kept);
+      setStatus(changed
+        ? { kind: "error", text: "Saved, but part of it couldn't be kept (for example a picture address or text that was too long). The page now shows exactly what visitors see." }
+        : { kind: "ok", text: "Saved. Visitors see it now." });
     } catch (err) {
       setStatus({ kind: "error", text: plainError(err, "save") });
     }
@@ -747,7 +804,7 @@ export function DesignEditor() {
   /* ---------- render ---------- */
   if (!active) {
     return (
-      <button type="button" className="pd-ui pd-launch" onClick={() => { force((n) => n + 1); setActive(true); setStatus({ kind: "idle" }); }} title="Move, resize, restyle and add things on this page">
+      <button type="button" className="pd-ui pd-launch" onClick={() => { force((n) => n + 1); setActive(true); setStatus((st) => (st.kind === "error" ? st : { kind: "idle" })); }} title={dirty ? "Design (this page has changes that are not saved yet)" : "Move, resize, restyle and add things on this page"}>
         Design{dirty ? " •" : ""}
       </button>
     );
@@ -996,7 +1053,7 @@ function ItemPanel({ sel, picked, design, apply, commit, setSel, onReplace, onSn
       {added?.kind === "text" && (
         <details open className="pd-sec">
           <summary>Words</summary>
-          <textarea data-pd-text="" rows={4} value={added.text ?? ""} onFocus={() => designStore.checkpoint()} onChange={(e) => apply({ text: e.target.value }, "live")} />
+          <textarea data-pd-text="" rows={4} maxLength={5000} value={added.text ?? ""} onFocus={() => designStore.checkpoint()} onChange={(e) => apply({ text: e.target.value }, "live")} />
         </details>
       )}
 
@@ -1222,12 +1279,23 @@ function PersonBackgroundControls({ onPicture, onChange, previous, children }: {
   const [strength, setStrength] = useState(saved);
   // live preview while dragging; saved once, shortly after the slider stops moving
   const timer = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const pending = useRef<number | null>(null);
+  const changeRef = useRef(onChange);
+  useEffect(() => { changeRef.current = onChange; }, [onChange]);
+  // closing the panel right after moving the slider still saves it
+  useEffect(() => () => {
+    window.clearTimeout(timer.current);
+    if (pending.current !== null) changeRef.current({ strength: pending.current });
+  }, []);
   const preview = (v: number) => {
     setStrength(v);
     art?.style.setProperty("--wix-art-opacity", String(v / 100));
     window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => onChange({ strength: v }), 700);
+    pending.current = v;
+    timer.current = window.setTimeout(() => {
+      pending.current = null;
+      onChange({ strength: v });
+    }, 700);
   };
   return (
     <>
@@ -1252,13 +1320,16 @@ function PersonBackgroundControls({ onPicture, onChange, previous, children }: {
 
 let libraryCache: Promise<Library> | null = null;
 const loadLibrary = () =>
-  (libraryCache ??= fetch("/api/design/library").then(async (r) => {
-    if (!r.ok) {
+  (libraryCache ??= fetch("/api/design/library", { signal: AbortSignal.timeout(45_000) })
+    .then(async (r) => {
+      if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? failText(r.status, "load the family pictures"));
+      return (await r.json()) as Library;
+    })
+    .catch((err) => {
+      // asked again next time (a single network hiccup used to break the picture list until the page was reloaded)
       libraryCache = null;
-      throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? "Could not load the family pictures.");
-    }
-    return (await r.json()) as Library;
-  }));
+      throw new Error(plainError(err, "load the family pictures"));
+    }));
 
 function Dialog({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   useEffect(() => {
@@ -1316,6 +1387,7 @@ function PicturePicker({ onPick, onClose }: { onPick: (p: Picked) => void; onClo
   const fromWeb = () => {
     const u = url.trim();
     if (!/^https:\/\/\S+$/.test(u)) return setErr("Paste a picture address that starts with https://");
+    if (!/^https:\/\/[^\s"'<>()\\]{1,2000}$/.test(u)) return setErr("This address has characters the site can't keep (like brackets). Save the picture to your computer and use \"From my computer\" instead.");
     const probe = new Image();
     probe.onload = () => onPick({ src: u, w: probe.naturalWidth, h: probe.naturalHeight });
     probe.onerror = () => setErr("That address did not load as a picture.");
@@ -1354,7 +1426,7 @@ function PicturePicker({ onPick, onClose }: { onPick: (p: Picked) => void; onClo
       {tab === "computer" && (
         <div className="pd-col">
           <p className="pd-hint">The picture is added to the Snackbox media library, then placed on the page. Big photos are made smaller first.</p>
-          <input type="file" accept={PHOTO_ACCEPT} disabled={busy} onChange={(e) => fromComputer(e.target.files?.[0])} />
+          <input type="file" accept={PHOTO_ACCEPT} disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; void fromComputer(f); }} />
           {busy && <p className="pd-hint">Uploading…</p>}
           <p className="pd-hint">Tip: you can also copy a picture anywhere and press Ctrl+V on the page.</p>
         </div>

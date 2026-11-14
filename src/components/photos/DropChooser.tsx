@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ROLES, pickPicture, send } from "@/components/wix/person/ChildSlots";
+import { ROLES, pickPicture, send, type Saved } from "@/components/wix/person/ChildSlots";
 
 /**
  * Edit mode, on a person's page the editor may change: a photo dropped on the page (or picked with "Add photos")
@@ -47,6 +47,11 @@ export function DropChooser({ choices, files, hint, onMemory, onDone }: {
   const [block, setBlock] = useState(hint?.newKidIn ?? choices.blocks[0]?.key ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // groups and children saved from earlier photos in this same round: the next photo can go to them
+  // (without this, three new children got three separate groups, and a second photo of one made a duplicate)
+  const [made, setMade] = useState<{ blocks: DropChoices["blocks"]; kids: DropChoices["kids"] }>({ blocks: [], kids: [] });
+  const allBlocks = [...choices.blocks, ...made.blocks];
+  const allKids = [...choices.kids, ...made.kids];
   const file = files[index];
   const left = files.length - index - 1;
 
@@ -89,7 +94,8 @@ export function DropChooser({ choices, files, hint, onMemory, onDone }: {
     try {
       const p = await pickPicture(file);
       if (p.preview) URL.revokeObjectURL(p.preview);
-      await send(choices.path, op, { ...fields, [photoField]: p.blob }, verb);
+      const out: Saved = await send(choices.path, op, { ...fields, [photoField]: p.blob }, verb);
+      remember(op, fields, out);
       next(true);
     } catch (err) {
       setError((err as Error).message || "Something went wrong.");
@@ -98,8 +104,25 @@ export function DropChooser({ choices, files, hint, onMemory, onDone }: {
     }
   };
 
-  const kids = hint?.kid ? [...choices.kids].sort((a, b) => Number(b.id === hint.kid) - Number(a.id === hint.kid)) : choices.kids;
-  const blocks = hint?.parent ? [...choices.blocks].sort((a, b) => Number(b.key === hint.parent) - Number(a.key === hint.parent)) : choices.blocks;
+  /** what a save made, so the next photos in this round can be put there too */
+  const remember = (op: string, fields: Record<string, string>, out: Saved) => {
+    const blocks: DropChoices["blocks"] = [];
+    const kids: DropChoices["kids"] = [];
+    if (op === "block-new" && out.block && !allBlocks.some((b) => b.key === out.block)) {
+      blocks.push({ key: out.block, role: fields.role ?? "", name: fields.name ?? "", hasPhoto: !fields.childName });
+    }
+    const inBlock = out.block ?? fields.block;
+    if (out.child && fields.childName && inBlock && !allKids.some((k) => k.id === out.child)) {
+      kids.push({ id: out.child, name: fields.childName, block: inBlock, hasPhoto: true });
+    }
+    if (blocks.length || kids.length) {
+      setMade((m) => ({ blocks: [...m.blocks, ...blocks], kids: [...m.kids, ...kids] }));
+      if (!block && blocks[0]) setBlock(blocks[0].key);
+    }
+  };
+
+  const kids = hint?.kid ? [...allKids].sort((a, b) => Number(b.id === hint.kid) - Number(a.id === hint.kid)) : allKids;
+  const blocks = hint?.parent ? [...allBlocks].sort((a, b) => Number(b.key === hint.parent) - Number(a.key === hint.parent)) : allBlocks;
 
   return (
     <div className="pd-ui drop-ask-backdrop" role="dialog" aria-modal="true" aria-label="Where does this photo go?">
@@ -125,10 +148,10 @@ export function DropChooser({ choices, files, hint, onMemory, onDone }: {
                   <input type="checkbox" checked={sameForRest} onChange={(e) => setSameForRest(e.target.checked)} /> The other {left} photo{left > 1 ? "s are" : " is"} memories too
                 </label>
               )}
-              <button type="button" onClick={() => setStep(choices.kids.length ? "child" : "new-child")} disabled={busy}>
+              <button type="button" onClick={() => setStep(allKids.length ? "child" : "new-child")} disabled={busy}>
                 A child&apos;s photo <small>→ their picture under Children</small>
               </button>
-              <button type="button" onClick={() => setStep(choices.blocks.length ? "parent" : "new-parent")} disabled={busy}>
+              <button type="button" onClick={() => setStep(allBlocks.length ? "parent" : "new-parent")} disabled={busy}>
                 The other parent&apos;s photo <small>→ the small framed photo beside their children</small>
               </button>
             </div>
@@ -155,14 +178,14 @@ export function DropChooser({ choices, files, hint, onMemory, onDone }: {
             <p className="drop-ask-q">A new child of {choices.first}</p>
             <div className="drop-ask-list">
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Child's full name" aria-label="Child's full name" maxLength={120} autoFocus disabled={busy} />
-              {choices.blocks.length > 1 && (
+              {allBlocks.length > 1 && (
                 <select value={block} onChange={(e) => setBlock(e.target.value)} aria-label="Their other parent" disabled={busy}>
-                  {choices.blocks.map((b) => <option key={b.key} value={b.key}>{blockLabel(b)}</option>)}
+                  {allBlocks.map((b) => <option key={b.key} value={b.key}>{blockLabel(b)}</option>)}
                 </select>
               )}
               <button type="button" className="pd-primary" disabled={busy || !name.trim()}
-                onClick={() => void (choices.blocks.length
-                  ? save("child-add", { block: block || choices.blocks[0].key, childName: name.trim() }, "childPhoto", "add this child")
+                onClick={() => void (allBlocks.length
+                  ? save("child-add", { block: block || allBlocks[0].key, childName: name.trim() }, "childPhoto", "add this child")
                   : save("block-new", { childName: name.trim() }, "childPhoto", "add this child"))}>
                 {busy ? "Saving…" : "Add this child"}
               </button>

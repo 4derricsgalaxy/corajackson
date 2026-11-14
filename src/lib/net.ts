@@ -25,7 +25,7 @@ export function failText(status: number, verb: string): string {
   if (status === 403) return `Could not ${verb}: this page is not one you can change.`;
   if (status === 413) return `Could not ${verb}: it is too big. Use a smaller picture (or fewer at once) and try again.`;
   if (status === 429) return `Could not ${verb}: too many changes at once. Wait a minute and try again.`;
-  if (status >= 500) return `Could not ${verb}: the website was busy (${status}). Reload the page to check whether it went through, then try again if it did not.`;
+  if (status >= 500) return `Could not ${verb}: the website was busy. Wait a moment and try again.`;
   return `Could not ${verb} (${status}). Try again.`;
 }
 
@@ -33,7 +33,7 @@ export function failText(status: number, verb: string): string {
 export function plainError(err: unknown, verb: string): string {
   const e = err as Error | undefined;
   if (e?.name === "TimeoutError" || e?.name === "AbortError") {
-    return `Could not ${verb}: it took too long. Check your internet connection, reload the page to see whether it went through, then try again if it did not.`;
+    return `Could not ${verb}: it took too long. Check your internet connection and try again (trying again is safe).`;
   }
   if (e instanceof TypeError && /fetch|network|load failed/i.test(e.message)) return `Could not ${verb}: no connection to the website. Check your internet connection and try again.`;
   return e?.message || `Could not ${verb}. Try again.`;

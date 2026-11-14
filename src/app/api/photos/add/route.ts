@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   // a family member adds photos to their own / their children's / grandchildren's pages (or those family lines' albums)
   try {
-    const access = await pageAccess(editor.email);
+    const access = await pageAccess(editor.email, (a) => mayChangeFor(a, targetId));
     if (!mayChangeFor(access, targetId)) return NextResponse.json({ error: notYours(access) }, { status: 403 });
   } catch (err) {
     return NextResponse.json({ error: `Could not check which page is yours: ${(err as Error).message}` }, { status: 502 });
@@ -90,8 +90,8 @@ export async function POST(req: NextRequest) {
     logMutation(editor, { tool: "Add photos", page: fromPage(req), entries: [id], detail: `Added "${title}" to ${person ? targetTitle : `${targetTitle}'s family album`}` }),
   ]);
   if (!created?.ok) {
-    const detail = created ? await created.text().catch(() => "") : "";
-    return NextResponse.json({ error: `Snackbox did not save the photo (${created?.status ?? "no answer"}). ${detail.slice(0, 160)}` }, { status: 502 });
+    if (created) console.warn("[photos/add] Snackbox refused a photo:", created.status, (await created.text().catch(() => "")).slice(0, 300));
+    return NextResponse.json({ error: created ? `Snackbox did not save the photo (it answered ${created.status}). Try again in a moment.` : "Snackbox didn't answer. Try again in a moment." }, { status: 502 });
   }
   // make sure it is published (harmless if the create already was)
   await mutate([{ publish: { id } }]);

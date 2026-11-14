@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const path = req.nextUrl.searchParams.get("path") ?? "";
   if (!PATH_RE.test(path)) return NextResponse.json({ error: "Bad page address." }, { status: 400 });
   try {
-    const access = await pageAccess(editor.email);
+    const access = await pageAccess(editor.email, (a) => mayChange(a, path));
     return NextResponse.json({ canEdit: mayChange(access, path), own: access.all ? undefined : access.pages[0] }, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message }, { status: 502 });

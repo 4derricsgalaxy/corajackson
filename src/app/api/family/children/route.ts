@@ -64,8 +64,8 @@ async function mutate(editor: EditorWrite, mutations: unknown[], tool: string, p
     cache: "no-store",
   }).catch(() => null);
   if (res?.ok) return null;
-  const detail = res ? await res.text().catch(() => "") : "";
-  return `Snackbox did not save it (${res?.status ?? "no answer"}). ${detail.slice(0, 160)}`.trim();
+  if (res) console.warn("[children] Snackbox refused a change:", res.status, (await res.text().catch(() => "")).slice(0, 300));
+  return res ? `Snackbox did not save it (it answered ${res.status}). Try again in a moment.` : "Snackbox didn't answer. Try again in a moment.";
 }
 
 export async function POST(req: NextRequest) {
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
   if (!slug) return fail("Children can only be added on a person's page.", 400);
 
   try {
-    const access = await pageAccess(editor.email);
+    const access = await pageAccess(editor.email, (a) => mayChange(a, path));
     if (!mayChange(access, path)) return fail(notYours(access), 403);
   } catch (err) {
     return fail(`Could not check which page is yours: ${(err as Error).message}`, 502);
@@ -87,10 +87,6 @@ export async function POST(req: NextRequest) {
   const graph = await getFamilyGraph();
   const person = graph.bySlug.get(slug);
   if (!person) return fail("Couldn't find this person in Snackbox.", 404);
-  const doc = await readDoc(editor, person._id);
-  if (!doc) return fail("Couldn't read this person's entry in Snackbox. Try again.", 502);
-
-  const families: RawBlock[] = Array.isArray(doc.families) ? (structuredClone(doc.families) as RawBlock[]) : [];
   const op = clean(form.get("op"), 20);
   const blockKey = clean(form.get("block"), 60);
   const childId = clean(form.get("child"), 80);
@@ -114,6 +110,33 @@ export async function POST(req: NextRequest) {
     // (its size too, so a crop set on it later can be shown)
     return up.ok ? { _type: "asset", _ref: up.id, alt, ...(up.url ? { url: up.url } : {}), ...(up.width && up.height ? { width: up.width, height: up.height } : {}) } : fail(up.error, up.status);
   };
+  // Pictures go up FIRST; only then is the entry read, changed and saved, all within a moment - so two saves on this
+  // page (a slow photo upload and another change) can't read the same list and wipe out each other's change.
+  const pics: Record<string, Pic | undefined> = {};
+  const upload = async (field: string, alt: string) => {
+    const f = file(field);
+    if (!f) return undefined;
+    const pic = await picture(f, alt);
+    if (pic instanceof NextResponse) return pic;
+    pics[field] = pic;
+    return undefined;
+  };
+  {
+    const childName = clean(form.get("childName"), 120);
+    const removing = form.get("remove") === "1";
+    const refused =
+      op === "block-new" ? (await upload("parentPhoto", clean(form.get("name"), 120))) ?? (childName ? await upload("childPhoto", childName) : undefined)
+      : op === "child-add" ? (childName ? await upload("childPhoto", childName) : undefined)
+      : op === "parent-photo" && !removing ? await upload("file", "")
+      : op === "child-photo" && !removing ? await upload("file", graph.byId.get(childId)?.title ?? "")
+      : undefined;
+    if (refused) return refused;
+  }
+
+  const doc = await readDoc(editor, person._id);
+  if (!doc) return fail("Couldn't read this person's entry in Snackbox. Try again.", 502);
+  const families: RawBlock[] = Array.isArray(doc.families) ? (structuredClone(doc.families) as RawBlock[]) : [];
+
   /** the words on a block: the fields sent are set, sent empty are removed, not sent are kept */
   const setWords = (block: RawBlock) => {
     if (form.has("role")) {
@@ -131,14 +154,22 @@ export async function POST(req: NextRequest) {
     return "";
   };
 
-  /** a new child entry under this person, with a free page address */
+  /** a new child entry under this person, with a free page address. A child of THIS person with the same name already
+   *  in Snackbox (a save that created the entry but then failed, tried again) is used again instead (`create` null). */
   const newChild = async (name: string, pic?: Pic): Promise<{ id: string; create: unknown } | NextResponse> => {
     const base = slugify(name) || "child";
     const candidates = [base, `${base}-${person.slug}`, ...Array.from({ length: 8 }, (_, i) => `${base}-${i + 2}`)];
+    const same = (title: unknown) => typeof title === "string" && slugify(title) === slugify(name);
     for (const s of candidates) {
-      if (s.length > 80 || graph.bySlug.has(s)) continue;
+      if (s.length > 80) continue;
+      const known = graph.bySlug.get(s);
+      if (known) {
+        if (known.parentId === person._id && same(known.title)) return { id: known._id, create: null };
+        continue;
+      }
       const taken = await readDoc(editor, `member-${s}`);
       if (taken === undefined) return fail("Snackbox didn't answer. Try again.", 502);
+      if (taken && refOf(taken.parent) === person._id && same(taken.title)) return { id: `member-${s}`, create: null };
       if (taken) continue;
       const data: Raw = { title: name, slug: s, parent: { _ref: person._id } };
       const lineage = refOf(doc.lineage) ?? (person.depth === 1 ? person._id : undefined);
@@ -152,11 +183,15 @@ export async function POST(req: NextRequest) {
 
   /** creates the child (published), then saves the list; answers the error text, or "" */
   const saveWithChild = async (child: { id: string; create: unknown }, detail: string) => {
-    const created = await mutate(editor, [child.create], tool, true);
-    if (created) return created;
-    await mutate(editor, [{ publish: { id: child.id } }], tool, true); // harmless if the create already published it
+    if (child.create) {
+      const created = await mutate(editor, [child.create], tool, true);
+      if (created) return created;
+      await mutate(editor, [{ publish: { id: child.id } }], tool, true); // harmless if the create already published it
+    }
     return saveList(detail, [child.id]);
   };
+  /** the block a child is already listed in on this page */
+  const listedIn = (id: string) => families.find((b) => (b.children ?? []).some((k) => refOf(k.child) === id));
   const saveList = (detail: string, extra: string[] = []) =>
     mutate(editor, [{ patch: { id: person._id, set: { families } } }, logMutation(editor, { tool, page: path, entries: [person._id, ...extra], detail })], tool);
 
@@ -167,26 +202,27 @@ export async function POST(req: NextRequest) {
     const block: RawBlock = { _key: `fam-${newKey()}`, children: [] };
     const bad = setWords(block);
     if (bad) return fail(bad, 400);
-    const parentPhoto = file("parentPhoto");
-    if (parentPhoto) {
-      const pic = await picture(parentPhoto, block.name ?? "");
-      if (pic instanceof NextResponse) return pic;
-      block.photo = pic;
-    }
+    if (pics.parentPhoto) block.photo = pics.parentPhoto;
     const childName = clean(form.get("childName"), 120);
     if (!childName && !block.name && !block.photo && !block.role) return fail("Type a name or add a photo first.", 400);
-    families.push(block);
-    answer = { block: block._key };
     if (childName) {
-      const childPhoto = file("childPhoto");
-      const pic = childPhoto ? await picture(childPhoto, childName) : undefined;
-      if (pic instanceof NextResponse) return pic;
+      const pic = pics.childPhoto;
       const child = await newChild(childName, pic);
       if (child instanceof NextResponse) return child;
+      const already = listedIn(child.id);
+      if (already) return NextResponse.json({ ok: true, block: already._key, child: child.id }); // saved already (a second tap, or a retry)
+      families.push(block);
       block.children!.push({ _key: newKey(), child: { _ref: child.id }, ...(pic ? { photo: pic } : {}) });
       error = await saveWithChild(child, `Added ${childName} under ${who}${block.name ? ` (with ${block.name})` : ""}`);
-      answer.child = child.id;
-    } else error = await saveList(`Added ${block.name ?? "another parent"} to ${who}'s Children`);
+      answer = { block: block._key, child: child.id };
+    } else {
+      // the same other parent with no children yet is already there: a second tap, or a retry after a lost answer
+      const twin = block.name && families.find((b) => !(b.children ?? []).length && b.name === block.name && (b.role ?? "") === (block.role ?? ""));
+      if (twin) return NextResponse.json({ ok: true, block: twin._key });
+      families.push(block);
+      answer = { block: block._key };
+      error = await saveList(`Added ${block.name ?? "another parent"} to ${who}'s Children`);
+    }
   } else if (op === "parent" || op === "parent-photo" || op === "block-remove") {
     const block = findBlock();
     if (!block) return fail("This part of the page changed. Reload the page and try again.", 409);
@@ -195,13 +231,9 @@ export async function POST(req: NextRequest) {
       if (bad) return fail(bad, 400);
       error = await saveList(`Changed the other parent on ${who}'s page to ${[block.role, block.name, block.status].filter(Boolean).join(" · ") || "(nothing)"}`);
     } else if (op === "parent-photo") {
-      const f = file("file");
       if (form.get("remove") === "1") delete block.photo;
-      else if (f) {
-        const pic = await picture(f, block.name ?? "");
-        if (pic instanceof NextResponse) return pic;
-        block.photo = pic;
-      } else return fail("No picture was received.", 400);
+      else if (pics.file) block.photo = { ...pics.file, alt: block.name ?? "" };
+      else return fail("No picture was received.", 400);
       error = await saveList(`${block.photo ? "New" : "Removed the"} photo of ${block.name ?? "the other parent"} on ${who}'s page`);
     } else {
       if (block.children?.length) return fail("Take the children out of this group first.", 400);
@@ -213,11 +245,10 @@ export async function POST(req: NextRequest) {
     if (!block) return fail("This part of the page changed. Reload the page and try again.", 409);
     const childName = clean(form.get("childName"), 120);
     if (!childName) return fail("Type the child's name first.", 400);
-    const childPhoto = file("childPhoto");
-    const pic = childPhoto ? await picture(childPhoto, childName) : undefined;
-    if (pic instanceof NextResponse) return pic;
+    const pic = pics.childPhoto;
     const child = await newChild(childName, pic);
     if (child instanceof NextResponse) return child;
+    if (listedIn(child.id)) return NextResponse.json({ ok: true, child: child.id }); // saved already (a second tap, or a retry)
     (block.children ??= []).push({ _key: newKey(), child: { _ref: child.id }, ...(pic ? { photo: pic } : {}) });
     error = await saveWithChild(child, `Added ${childName} under ${who}`);
     answer = { child: child.id };
@@ -246,13 +277,9 @@ export async function POST(req: NextRequest) {
     const node = graph.byId.get(childId);
     if (!found) return fail("This child isn't on this page's list. Reload the page and try again.", 409);
     if (op === "child-photo") {
-      const f = file("file");
       if (form.get("remove") === "1") delete found.kid.photo;
-      else if (f) {
-        const pic = await picture(f, node?.title ?? "");
-        if (pic instanceof NextResponse) return pic;
-        found.kid.photo = pic;
-      } else return fail("No picture was received.", 400);
+      else if (pics.file) found.kid.photo = pics.file;
+      else return fail("No picture was received.", 400);
       error = await saveList(`${found.kid.photo ? "New" : "Removed the"} photo of ${node?.title ?? childId} on ${who}'s page`, [childId]);
     } else if (op === "child-name") {
       const childName = clean(form.get("childName"), 120);
@@ -269,21 +296,23 @@ export async function POST(req: NextRequest) {
       }
       const raw = await readDoc(editor, childId);
       if (raw === undefined) return fail("Snackbox didn't answer. Try again.", 502);
-      const [photos, stories] = await Promise.all([getPhotos(), getStories()]);
-      const extra = raw ? Object.keys(raw).filter((k) => !k.startsWith("_") && !STARTER_FIELDS.has(k)) : [];
-      const inUse =
-        extra.length > 0 ||
-        refOf(raw?.parent) !== person._id ||
-        graph.all.some((m) => m.parentId === childId) ||
-        photos.some((p) => p.peopleIds?.includes(childId)) ||
-        stories.some((s) => s.authorId === childId || s.peopleIds?.includes(childId));
-      if (inUse) return fail(`${node?.title ?? "This child"} already has their own page content, so they can't be removed here. Ask the site owner.`, 400);
+      if (raw) {
+        // (raw null: an earlier try already deleted the entry; only the list is left to fix)
+        const [photos, stories] = await Promise.all([getPhotos(), getStories()]);
+        const extra = Object.keys(raw).filter((k) => !k.startsWith("_") && !STARTER_FIELDS.has(k));
+        const inUse =
+          extra.length > 0 ||
+          refOf(raw.parent) !== person._id ||
+          graph.all.some((m) => m.parentId === childId) ||
+          photos.some((p) => p.peopleIds?.includes(childId)) ||
+          stories.some((s) => s.authorId === childId || s.peopleIds?.includes(childId));
+        if (inUse) return fail(`${node?.title ?? "This child"} already has their own page content, so they can't be removed here. Ask the site owner.`, 400);
+        // the entry first: if this fails nothing has changed; if the list save below fails, the page just shows one child fewer
+        const gone = await mutate(editor, [{ delete: { id: childId } }], tool, true);
+        if (gone) return fail(gone, 502);
+      }
       found.block.children = (found.block.children ?? []).filter((k) => k !== found.kid);
       error = await saveList(`Removed ${node?.title ?? childId} from ${who}'s Children (entry deleted)`, [childId]);
-      if (!error && raw) {
-        const gone = await mutate(editor, [{ delete: { id: childId } }], tool, true);
-        if (gone) error = `Taken off this page, but the child's own entry is still in Snackbox: ${gone}`;
-      }
     }
   } else return fail("Unknown change.", 400);
 

@@ -28,7 +28,7 @@ type Doc = { result?: { data?: string; history?: string } };
 /** null when this editor may change every one of these pages, else the refusal to send */
 async function refuse(editor: EditorWrite, paths: string[]) {
   try {
-    const access = await pageAccess(editor.email);
+    const access = await pageAccess(editor.email, (a) => paths.every((p) => mayChange(a, p)));
     if (paths.every((p) => mayChange(access, p))) return null;
     return NextResponse.json({ error: notYours(access) }, { status: 403 });
   } catch (err) {
@@ -138,10 +138,11 @@ export async function POST(req: NextRequest) {
     headers: { ...editor.auth, "Content-Type": "application/json" },
     body: JSON.stringify({ mutations, actor: actorFor(editor, "Design") }),
     cache: "no-store",
-  });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    return NextResponse.json({ error: `Snackbox did not accept the change (${res.status}). ${detail.slice(0, 200)}` }, { status: 502 });
+    signal: AbortSignal.timeout(45_000),
+  }).catch(() => null);
+  if (!res?.ok) {
+    if (res) console.warn("[design] Snackbox refused a save:", res.status, (await res.text().catch(() => "")).slice(0, 300));
+    return NextResponse.json({ error: res ? `Snackbox did not accept the change (it answered ${res.status}). Press Save again in a moment.` : "Snackbox didn't answer. Press Save again in a moment." }, { status: 502 });
   }
   revalidateTag(cacheTags.type(editor.project, DESIGN_TYPE), { expire: 0 });
   revalidatePath("/", "layout");

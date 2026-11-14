@@ -35,7 +35,7 @@ export async function uploadPicture(editor: EditorWrite, file: File, alt: string
     .then(async (r) => ({ ok: r.ok, status: r.status, json: (await r.json().catch(() => null)) as { result?: { id?: string; url?: string; width?: number | null; height?: number | null } } | null }))
     .catch(() => ({ ok: false, status: 0, json: null }));
   const id = asset.json?.result?.id;
-  if (!asset.ok || !id) return { ok: false, status: 502, error: `Snackbox did not accept the picture (${asset.status || "no answer"}).` };
+  if (!asset.ok || !id) return { ok: false, status: 502, error: asset.status ? `Snackbox did not accept the picture (it answered ${asset.status}). Try again in a moment.` : "Snackbox didn't answer. Try again in a moment." };
   const { url, width, height } = asset.json?.result ?? {};
   return { ok: true, id, url, ...(width && height ? { width, height } : {}) };
 }
