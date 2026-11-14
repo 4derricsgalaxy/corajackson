@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { site } from "@/lib/cms/client";
+import { findSteady, site } from "@/lib/cms/client";
 import { parseDesign, type Design } from "./model";
 
 export const DESIGN_TYPE = "pageDesign";
@@ -11,7 +11,7 @@ export const getDesigns = cache(async (): Promise<Map<string, Design>> => {
   const out = new Map<string, Design>();
   try {
     for (let offset = 0; offset < 5000; offset += 100) {
-      const page = await site.query<DesignDoc>(DESIGN_TYPE).limit(100).offset(offset).find();
+      const page = await findSteady(site.query<DesignDoc>(DESIGN_TYPE).limit(100).offset(offset));
       for (const doc of page) {
         const design = parseDesign(doc.data);
         if (doc.title && design) out.set(doc.title, design);

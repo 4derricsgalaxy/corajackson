@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { site } from "../cms/client";
+import { findSteady, site } from "../cms/client";
 import { loadLocalContent } from "../data/local";
 import { fromCms, nestedFromCms } from "./image";
 import { TYPES, type Family, type FamilyMember, type HistoryEntry, type Partner, type Photo, type SiteImage, type SiteSettings, type Story, type TreeNode } from "./types";
@@ -51,13 +51,7 @@ async function fetchAll(type: string, include: string[] = []): Promise<Doc[]> {
   for (let offset = 0; offset < 10_000; offset += pageSize) {
     let q = site.query<Doc>(type).order("_order", "asc").limit(pageSize).offset(offset);
     if (include.length) q = q.include(...include);
-    let page = await q.find();
-    // Snackbox sometimes answers a busy moment with an empty list (OK, 0 rows). Trusting that turned every person
-    // page "not found", so an empty FIRST page is asked again a few times before it is believed.
-    for (let tryAgain = 1; offset === 0 && page.length === 0 && tryAgain < 5; tryAgain++) {
-      await new Promise((r) => setTimeout(r, 400 * tryAgain));
-      page = await q.find(tryAgain + 1);
-    }
+    const page = await findSteady(q);
     out.push(...page);
     if (page.length < pageSize) break;
   }
@@ -213,7 +207,7 @@ export const getHistory = cache(async (): Promise<HistoryEntry[]> =>
 export const getSettings = cache(async (): Promise<SiteSettings> =>
   withFallback(
     async () => {
-      const rows = await site.query<Doc>(TYPES.settings).include("heroImage", "treeImage", "backgroundImage").limit(1).find();
+      const rows = await findSteady(site.query<Doc>(TYPES.settings).include("heroImage", "treeImage", "backgroundImage").limit(1));
       return rows.length ? toSettings(rows[0]) : loadLocalContent().settings;
     },
     () => loadLocalContent().settings,

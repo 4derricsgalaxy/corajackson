@@ -8,3 +8,28 @@ export const PROJECT = process.env.NEXT_PUBLIC_SNACKBOX_PROJECT ?? "corajackson"
  * TTL is safe here: the revalidation webhook expires the tags on publish.
  */
 export const site = cms(PROJECT, { revalidate: 3600 });
+
+const TRIES = 5;
+
+/**
+ * One list read from Snackbox, asked again when it stumbles. Under load (a build renders ~140 pages at once) Snackbox
+ * sometimes fails a request (HTTP 500) or answers OK with an EMPTY list. Believing either baked "not found" person
+ * pages, the old local seed, or pages without their saved Design into a build. Every list this site reads has entries,
+ * so an empty answer is asked again too, and only the last try's answer is believed. Each retry is a new URL
+ * (`&try=N`), so the data cache can't hand back the bad answer. Still failing after the last try: the error goes to
+ * the caller, which falls back exactly as before.
+ */
+export async function findSteady<T>(q: { find(attempt?: number): Promise<T[]> }): Promise<T[]> {
+  let failure: unknown;
+  for (let attempt = 1; attempt <= TRIES; attempt++) {
+    if (attempt > 1) await new Promise((r) => setTimeout(r, 400 * (attempt - 1)));
+    try {
+      const rows = await q.find(attempt);
+      if (rows.length > 0 || attempt === TRIES) return rows;
+    } catch (err) {
+      failure = err;
+      if (attempt === TRIES) break;
+    }
+  }
+  throw failure;
+}
