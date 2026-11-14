@@ -51,7 +51,7 @@ async function fetchAll(type: string, include: string[] = []): Promise<Doc[]> {
   for (let offset = 0; offset < 10_000; offset += pageSize) {
     let q = site.query<Doc>(type).order("_order", "asc").limit(pageSize).offset(offset);
     if (include.length) q = q.include(...include);
-    const page = await findSteady(q);
+    const page = await findSteady(q, { emptyOk: offset > 0 });
     out.push(...page);
     if (page.length < pageSize) break;
   }
@@ -165,11 +165,19 @@ export const bySort = <T extends { sortOrder?: number | string; title: string }>
 };
 
 const isLocalSource = () => process.env.CONTENT_SOURCE === "local";
+/** On Vercel (the live site and its previews) a failed read is an ERROR, never the seed: the seed is the September 2026 Wix export
+ *  (~40 people missing), and a page rendered from it replaced the good cached page for up to an hour. Throwing instead makes Next keep
+ *  serving the last good page (and a build fail, so the live deployment stays as it is). Local runs still fall back. */
+const keepLastGoodPage = () => Boolean(process.env.VERCEL_ENV);
+export function failOnVercel(err: unknown, what: string) {
+  if (keepLastGoodPage()) throw new Error(`[snackbox] could not read ${what}: ${(err as Error)?.message ?? err}`);
+}
 async function withFallback<T>(remote: () => Promise<T>, local: () => T): Promise<T> {
   if (isLocalSource()) return local();
   try {
     return await remote();
   } catch (err) {
+    failOnVercel(err, "the site's content");
     console.warn("[snackbox] fetch failed, using local seed:", (err as Error).message);
     return local();
   }

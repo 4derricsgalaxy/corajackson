@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { findSteady, site } from "@/lib/cms/client";
+import { failOnVercel } from "@/lib/content/queries";
 import { parseDesign, type Design } from "./model";
 
 export const DESIGN_TYPE = "pageDesign";
@@ -11,7 +12,7 @@ export const getDesigns = cache(async (): Promise<Map<string, Design>> => {
   const out = new Map<string, Design>();
   try {
     for (let offset = 0; offset < 5000; offset += 100) {
-      const page = await findSteady(site.query<DesignDoc>(DESIGN_TYPE).limit(100).offset(offset));
+      const page = await findSteady(site.query<DesignDoc>(DESIGN_TYPE).limit(100).offset(offset), { emptyOk: offset > 0 });
       for (const doc of page) {
         const design = parseDesign(doc.data);
         if (doc.title && design) out.set(doc.title, design);
@@ -19,7 +20,9 @@ export const getDesigns = cache(async (): Promise<Map<string, Design>> => {
       if (page.length < 100) break;
     }
   } catch (err) {
-    // no designs (or the CMS is unreachable): every page shows its built-in format
+    // the live site keeps its last good pages rather than caching them without their saved Designs
+    failOnVercel(err, "page designs");
+    // locally: every page shows its built-in format
     console.warn("[design] could not load page designs:", (err as Error).message);
   }
   return out;

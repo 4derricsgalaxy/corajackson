@@ -296,9 +296,10 @@ export function designCss(design: Design): string {
     const s = sel(key);
     const { self, text } = lookDecls(look, { geometry: false });
     // the write-up under the portrait is the same fixed box on every page (Joanne's size; long text scrolls inside it),
-    // so a size set on it is ignored; a height on the block holding it is a minimum
+    // so a size set on it is ignored; a height on the block holding it, or on the Children column, is a minimum
+    // (the Children column grows with its list - a fixed height would let a long list run over Memories)
     const fixed = key === "write-up";
-    const grow = key === "bio-block" && look.h;
+    const grow = (key === "bio-block" || key === "children") && look.h;
     const geo = lookDecls({ x: look.x, y: look.y, w: fixed ? undefined : look.w, h: fixed || grow ? undefined : look.h }, { geometry: true }).self;
     if (grow) geo.push(`min-height: ${look.h}px !important`);
     if (self.length) out.push(`${s}{${self.join(";")}}`);
@@ -311,6 +312,11 @@ export function designCss(design: Design): string {
     if (key === "footer" && look.y && look.y < 0) wide.push(`${s}:last-child{margin-bottom:${look.y}px !important}`);
     if (look.w || look.h) wide.push(`${s}>img,${s}>span>img,${s}>a>img{width:100% !important;height:100% !important;max-width:none !important}`);
   }
+  // Memories moved UP (to close a gap under a short page) would land on the last children once the Children list is the
+  // tallest thing in the section: the column gets that much room at its bottom. Where the left side is taller this
+  // changes nothing (the column is shorter than the section either way).
+  const up = Math.max(0, ...["memories", "memories-heading", "memories-strip"].map((k) => -(design.items[k]?.y ?? 0)));
+  if (up > 0) wide.push(`${sel("children")}{padding-bottom:${Math.round(up)}px !important;box-sizing:border-box !important}`);
   if (wide.length) out.push(`@media (min-width:980px){${wide.join("")}}`);
   for (const a of design.added) {
     const s = `[data-pd-id="${a.id}"]`;

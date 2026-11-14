@@ -19,13 +19,14 @@ const TRIES = 5;
  * (`&try=N`), so the data cache can't hand back the bad answer. Still failing after the last try: the error goes to
  * the caller, which falls back exactly as before.
  */
-export async function findSteady<T>(q: { find(attempt?: number): Promise<T[]> }): Promise<T[]> {
+export async function findSteady<T>(q: { find(attempt?: number): Promise<T[]> }, { emptyOk = false } = {}): Promise<T[]> {
   let failure: unknown;
   for (let attempt = 1; attempt <= TRIES; attempt++) {
     if (attempt > 1) await new Promise((r) => setTimeout(r, 400 * (attempt - 1)));
     try {
       const rows = await q.find(attempt);
-      if (rows.length > 0 || attempt === TRIES) return rows;
+      // (a later page of a paged read may really be empty: the list ended exactly on a page boundary)
+      if (rows.length > 0 || emptyOk || attempt === TRIES) return rows;
     } catch (err) {
       failure = err;
       if (attempt === TRIES) break;

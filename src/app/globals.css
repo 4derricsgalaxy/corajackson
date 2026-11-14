@@ -332,17 +332,18 @@ body {
 }
 .wix-person-solo [data-pd="fact-families"] { display: none; }
 
-/* ---- every person page is the same size on desktop: 980 x 857 (the standard page) ----
-   the top section is at least the standard 546px; the write-up is a fixed box under the portrait, a long Children list scrolls in its column, and a page with no Memories is padded to full height.
-   The Children column is as tall as the top section (at least 546px, more when the left column is taller) but never makes it taller (contain: size),
-   so it only scrolls when its list is longer than the whole section, and a short list moved down with Design gets room instead of a scroll bar. */
+/* ---- every person page is at least the standard size on desktop: 980 x 857 ----
+   the top section is at least the standard 546px; the write-up is a fixed box under the portrait, and a page with no Memories is padded to full height.
+   The Children column is as tall as the top section (at least 546px) and a longer Children list makes the section taller, so every child shows
+   and Memories moves down (nothing scrolls inside the column, nothing is cut off). */
 @media (min-width: 980px) {
   .wix-canvas.wix-person { min-height: 857px !important; }
-  .wix-person-cols, .wix-person-cols:has(+ .wix-person-memories) { height: auto; min-height: 546px; }
-  .wix-person-right { align-self: stretch; min-height: 546px; contain: size; }
-  /* it scrolls only when its list is longer than the column (person/ChildrenScroll.tsx); otherwise nothing is clipped,
-     so pieces moved out of it with Design show in full */
-  .wix-person-right.wix-person-right-scroll { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+  .wix-person-cols { height: auto; min-height: 546px; }
+  .wix-person-right { align-self: stretch; min-height: 546px; }
+  /* the write-up FLOATS under the portrait: as a plain box beside the floated facts, Safari put it under the portrait while Chrome and
+     Firefox put it under the facts when they run long (8 pages, whose Designs were made in Chrome, were jumbled in Safari). As a float
+     every browser places it the same way, exactly where Chrome always did. */
+  .wix-person-quote { float: left; }
 }
 
 .wix-person-placeholder {
@@ -535,12 +536,15 @@ body {
   .kid-slot-mini > .kid-slot-save { width: 100%; height: 20px; margin: 3px 0 0; padding: 0 4px; font-size: 10px; }
   .kid-slot-mini > .kid-slot-error { width: 120px; margin-left: -29px; font-size: 10px; }
   .wix-person-kids-none { height: 0; margin-top: 0; }
-  .wix-person-children > .block-slot-open { position: absolute; }
+  /* "+ Children with another parent" sits at the top right of the Children column (beside the heading), so a long list can never
+     push it under Memories; its card opens in the same spot */
+  .wix-person-children:not(.kid-slot-start):has(> .block-slot-open) { position: relative; }
+  .wix-person-children > .block-slot-open { position: absolute; top: 2px; right: 0; margin: 0; }
   /* the open "Children with another parent" card: sized to the Children column, and above Memories / the nav band
      (the column's layer is under them, so a card reaching that low had its child photo, name and Save covered) */
   .wix-person-children:not(.kid-slot-start):has(> .block-slot) { position: relative; }
   .wix-person-cols:has(.wix-person-children > .block-slot) { z-index: 3; }
-  .wix-person-children:not(.kid-slot-start) > .block-slot { position: absolute; z-index: 6; left: 0; width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; background: rgb(255 255 255 / .97); box-shadow: 0 6px 24px #0004; }
+  .wix-person-children:not(.kid-slot-start) > .block-slot { position: absolute; z-index: 6; top: 2px; left: 0; width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; background: rgb(255 255 255 / .97); box-shadow: 0 6px 24px #0004; }
 }
 
 /* "+ Add children" on a page with none yet: above "Add photos" */

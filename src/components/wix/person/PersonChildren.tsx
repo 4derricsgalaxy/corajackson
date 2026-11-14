@@ -188,7 +188,7 @@ export function PersonChildren({ person, byId, assets, design, slots }: Props) {
           </div>
         );
       })}
-      {slots && <NewBlock path={slots.path} follow={shown.length ? `group-${keyPart(shown[shown.length - 1].key)}` : undefined} />}
+      {slots && <NewBlock path={slots.path} follow={shown.length ? "children-heading" : undefined} />}
       {slots && <ChildrenFit />}
     </section>
   );
