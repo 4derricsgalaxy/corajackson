@@ -536,6 +536,10 @@ body {
   .kid-slot-mini > .kid-slot-error { width: 120px; margin-left: -29px; font-size: 10px; }
   .wix-person-kids-none { height: 0; margin-top: 0; }
   .wix-person-children > .block-slot-open { position: absolute; }
+  /* the open "Children with another parent" card: sized to the Children column, and above Memories / the nav band
+     (the column's layer is under them, so a card reaching that low had its child photo, name and Save covered) */
+  .wix-person-children:not(.kid-slot-start):has(> .block-slot) { position: relative; }
+  .wix-person-cols:has(.wix-person-children > .block-slot) { z-index: 3; }
   .wix-person-children:not(.kid-slot-start) > .block-slot { position: absolute; z-index: 6; left: 0; width: 100%; box-sizing: border-box; padding: 10px; border-radius: 8px; background: rgb(255 255 255 / .97); box-shadow: 0 6px 24px #0004; }
 }
 
