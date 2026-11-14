@@ -101,7 +101,8 @@ export class QueryBuilder<T = Record<string, unknown>> {
   locale(l: string) { this._locale = l; return this; }
   drafts() { this._perspective = "draft"; return this; }
 
-  async find(): Promise<T[]> {
+  /** `attempt` > 1 = asking again: a different URL, so the cached answer of the earlier try is not reused */
+  async find(attempt = 1): Promise<T[]> {
     const q = {
       type: this.type,
       filters: this.filters.length ? this.filters : undefined,
@@ -113,7 +114,7 @@ export class QueryBuilder<T = Record<string, unknown>> {
       perspective: this._perspective,
     };
     const { result } = await this.client.request<{ result: T[] }>(
-      `query?q=${encodeURIComponent(JSON.stringify(q))}`,
+      `query?q=${encodeURIComponent(JSON.stringify(q))}${attempt > 1 ? `&try=${attempt}` : ""}`,
       {},
       { type: this.type }
     );
@@ -196,11 +197,11 @@ export class CmsClient {
         // rides inside the fluent q payload (the API gates on it there);
         // doc reads take it as a query param. Explicit .drafts() etc. win.
         headers.Authorization = `Bearer ${edit}`;
-        const m = path.match(/^query\?q=(.+)$/);
+        const m = path.match(/^query\?q=([^&]+)(&.*)?$/);
         if (m) {
           const q = JSON.parse(decodeURIComponent(m[1])) as { perspective?: string };
           q.perspective ??= "draft";
-          path = `query?q=${encodeURIComponent(JSON.stringify(q))}`;
+          path = `query?q=${encodeURIComponent(JSON.stringify(q))}${m[2] ?? ""}`;
         } else {
           path += (path.includes("?") ? "&" : "?") + "perspective=draft";
         }

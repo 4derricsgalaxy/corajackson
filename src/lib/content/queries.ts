@@ -51,7 +51,13 @@ async function fetchAll(type: string, include: string[] = []): Promise<Doc[]> {
   for (let offset = 0; offset < 10_000; offset += pageSize) {
     let q = site.query<Doc>(type).order("_order", "asc").limit(pageSize).offset(offset);
     if (include.length) q = q.include(...include);
-    const page = await q.find();
+    let page = await q.find();
+    // Snackbox sometimes answers a busy moment with an empty list (OK, 0 rows). Trusting that turned every person
+    // page "not found", so an empty FIRST page is asked again a few times before it is believed.
+    for (let tryAgain = 1; offset === 0 && page.length === 0 && tryAgain < 5; tryAgain++) {
+      await new Promise((r) => setTimeout(r, 400 * tryAgain));
+      page = await q.find(tryAgain + 1);
+    }
     out.push(...page);
     if (page.length < pageSize) break;
   }
