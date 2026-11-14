@@ -36,7 +36,7 @@ export function SiteLinks({ current, className }: { current?: string; className?
       {SITE_LINKS.map(([href, label], i) => (
         <span key={href}>
           {i > 0 && <span aria-hidden className="wix-site-links-dot">·</span>}
-          <Link href={href} aria-current={current === href ? "page" : undefined}>{label}</Link>
+          <Link href={href} aria-current={current === href ? "page" : undefined} prefetch={href === "/gallery" ? false : undefined}>{label}</Link>
         </span>
       ))}
     </p>

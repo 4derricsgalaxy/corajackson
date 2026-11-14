@@ -93,7 +93,9 @@ export async function preparePhoto(file: File, maxSide = 2400, opts: { keepTrans
   let bmp: ImageBitmap;
   try {
     // "from-image" turns phone photos the right way up using their camera rotation tag
-    bmp = await createImageBitmap(source, { imageOrientation: "from-image" });
+    // (an older Safari that doesn't know the option refuses the call: then it is read without it - browsers turn
+    // photos upright on their own nowadays anyway)
+    bmp = await createImageBitmap(source, { imageOrientation: "from-image" }).catch(() => createImageBitmap(source));
   } catch {
     if (heic) throw new HeicDecodeError("This browser could not read the iPhone photo.");
     throw new Error("This file isn't a picture the browser can open. Save it as a JPG and try again.");

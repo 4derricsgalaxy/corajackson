@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { createPortal } from "react-dom";
 import { editableField } from "@/lib/cms/sdk";
 import { cropAttr, cropItemAttr, type ImageCrop } from "@/lib/content/crop";
+import { useSwipe } from "./useSwipe";
 
 export interface SliderPhoto {
   key: string;
@@ -161,6 +162,7 @@ function Lightbox({ photos, index, onIndex, onClose }: { photos: SliderPhoto[]; 
   const photo = photos[index];
 
   const go = useCallback((d: number) => onIndex((index + d + photos.length) % photos.length), [index, photos.length, onIndex]);
+  const swipe = useSwipe(() => go(-1), () => go(1), many);
 
   // focus management + scroll lock, once per open
   useEffect(() => {
@@ -203,6 +205,7 @@ function Lightbox({ photos, index, onIndex, onClose }: { photos: SliderPhoto[]; 
       aria-modal="true"
       aria-label={photo.caption || photo.alt || "Photo"}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      {...swipe}
     >
       <button ref={closeRef} type="button" className="wix-slider-lb-close" aria-label="Close" onClick={onClose}>
         <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden><path d="M2 2l18 18M20 2 2 20" stroke="#fff" strokeWidth="2.5" /></svg>

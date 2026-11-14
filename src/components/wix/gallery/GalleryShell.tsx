@@ -29,7 +29,7 @@ export function GalleryShell({ items, albums, current, title, footerText, editin
     <WixCanvas path={current ? `/gallery/${current}` : "/gallery"} minHeight={676} className={clsx("wix-gallery-page", footerLabelText(footerText).length > 40 && "wix-gallery-long-footer")}>
       <div className="wix-gallery-top">
         <HomeButton large piece={t("btn-home", undefined, "Home button")} />
-        {title && <h1 className="wix-h2 wix-gallery-title" {...t("title", undefined, "Album title")}>{title}</h1>}
+        {title ? <h1 className="wix-h2 wix-gallery-title" {...t("title", undefined, "Album title")}>{title}</h1> : <h1 className="sr-only">Gallery</h1>}
         {albums.length > 0 && (
           <nav aria-label="Albums" className="wix-gallery-filter" {...t("albums", undefined, "Album links")}>
             <Link href="/gallery" className={clsx("wix-text-link", !current && "is-current")} aria-current={!current ? "page" : undefined}>

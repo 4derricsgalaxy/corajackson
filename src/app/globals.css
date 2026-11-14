@@ -575,6 +575,10 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
   font: 400 13px/1.35 Arial, Helvetica, sans-serif; color: #333; text-align: center; cursor: pointer;
 }
 .wix-add-photos:hover { background: #eef3fe; }
+/* phones: in the page, above the nav (floating, it landed on the write-up of a short page) */
+@media (max-width: 979px) {
+  .wix-add-photos { position: static; translate: none; width: auto; max-width: calc(100% - 36px); margin: 0 auto; }
+}
 .wix-add-photos strong { font-size: 15px; color: #1d4fc4; }
 
 .wix-slider {
@@ -670,6 +674,7 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 .wix-slider-lb-figure img {
   display: block;
   max-width: 100%;
+  max-height: calc(100vh - 150px);
   max-height: calc(100dvh - 150px);
   object-fit: contain;
   background: #292f33;
@@ -760,9 +765,15 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
   .wix-slider-lb-prev { left: 0; }
   .wix-slider-lb-next { right: 0; }
 }
+@media (max-width: 979px) {
+  /* the write-up shows in full (the 160 x 327 box with hidden scrolling is a desktop layout) and flows around the facts */
+  .wix-person-quote { width: auto; height: auto; overflow: visible; }
+  /* the tab up to the parent ("Home" on Cora's children) sits above the page, since there is no gray margin for it */
+  .wix-person-side-tab { display: inline-flex; position: relative; left: auto; top: auto; width: auto; min-width: 0; height: 36px; margin: 8px 0 6px 12px; padding: 0 14px; font-size: 15px; }
+  .wix-person-side-tab::before { content: "\2039\00a0"; }
+}
 @media (max-width: 400px) {
   .wix-person-portrait .wix-person-photo { width: 140px; height: 188px; }
-  .wix-person-quote { width: 140px; }
   .wix-person-facts { width: calc(100% - 132px); }
 }
 /* touch devices swipe the strip; the chevrons would only cover photos */
@@ -854,7 +865,7 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 /* ---------- Family tree: a 744-unit stage; --u is one original pixel, so phones scale it ---------- */
 .wix-tree-canvas { container-type: inline-size; }
 .wix-tree-inner {
-  --u: calc(100cqw / 744);
+  --u: calc(min(100vw, 744px) / 744);
   min-height: calc(850 * var(--u));
   padding-bottom: calc(30 * var(--u));
   background: #9db8b2 url("/wix/tree-bg.jpg") top center / 100% auto no-repeat;
@@ -919,7 +930,9 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
   color: var(--wix-heading);
   font: 700 calc(22 * var(--u)) / 1 Arial, Helvetica, sans-serif;
 }
-/* No labels at rest (the original had none); the name appears on hover / keyboard focus. */
+@supports (width: 1cqw) { .wix-tree-inner { --u: calc(100cqw / 744); } }
+/* No labels at rest (the original had none); the name appears on hover / keyboard focus - and always on touch screens,
+   which have no hover (phone and tablet visitors saw photos with no names). */
 .wix-tree-name {
   position: absolute;
   top: 100%;
@@ -1133,7 +1146,7 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
   font-family: Arial, Helvetica, sans-serif;
 }
 .wix-gallery-lightbox-figure { margin: 0; max-width: calc(100vw - 160px); display: flex; flex-direction: column; align-items: center; }
-.wix-gallery-lightbox-img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 150px); object-fit: contain; background: #111; }
+.wix-gallery-lightbox-img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100vh - 150px); max-height: calc(100dvh - 150px); object-fit: contain; background: #111; }
 .wix-gallery-lightbox-caption { margin-top: 12px; max-width: 640px; text-align: center; font-size: 13px; line-height: 1.5; color: #d9d9d9; }
 .wix-gallery-lightbox-caption p { margin: 0; }
 .wix-gallery-lightbox-title { font-size: 16px; color: #fff; }
@@ -1161,7 +1174,7 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 .wix-gallery-lightbox-next { right: 8px; }
 @media (max-width: 719px) {
   .wix-gallery-lightbox-figure { max-width: 100vw; }
-  .wix-gallery-lightbox-img { max-height: calc(100dvh - 190px); }
+  .wix-gallery-lightbox-img { max-height: calc(100vh - 190px); max-height: calc(100dvh - 190px); }
   .wix-gallery-lightbox-caption { padding: 0 16px; }
   .wix-gallery-lightbox-arrow { top: auto; bottom: 10px; margin-top: 0; width: 56px; height: 56px; }
   .wix-gallery-lightbox-arrow svg { width: 14px; height: 24px; }
@@ -1288,12 +1301,14 @@ html.pd-editing .parent-slot-open, html.pd-editing .parent-slot-form, html.pd-ed
 .pd-html-inner { width: 100%; height: 100%; }
 
 /* ---------- Design tool (edit mode only; components/design/DesignEditor.tsx) ---------- */
-html.pd-editing body { padding-top: 48px; user-select: none; }
+html.pd-editing body { padding-top: var(--pd-bar-h, 48px); user-select: none; }
 /* while designing, the page is exactly what visitors see: no editor-only "Click to add" facts or "Add photos" box,
    which make the page taller in edit mode (moves made against that taller page landed wrong for visitors) */
 html.pd-editing .wix-fact-adds, html.pd-editing .wix-add-photos { display: none !important; }
 /* (the last fact still showing keeps the last fact's smaller gap, as for visitors) */
-html.pd-editing [data-pd], html.pd-editing [data-pd-id] { cursor: move; touch-action: none; }
+html.pd-editing [data-pd], html.pd-editing [data-pd-id] { cursor: move; }
+/* only what is selected holds on to a finger (to be dragged); a finger anywhere else scrolls the page as usual */
+@media (min-width: 980px) { html.pd-editing .pd-sel { touch-action: none; } }
 html.pd-editing .pd-hover { outline: 1px dashed #2f6fed !important; outline-offset: 1px; }
 html.pd-editing .pd-ghost { visibility: visible !important; opacity: .3 !important; outline: 2px dashed #dc2626 !important; }
 html.pd-editing .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-only labels stay visible so they can be picked */
@@ -1325,7 +1340,10 @@ html.pd-editing .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-on
 .pd-frame-extra { outline: 2px dashed #2f6fed; }
 .pd-hoverbox { outline: 1px dashed #2f6fed; outline-offset: 1px; }
 .pd-multi { margin: 0 0 10px; }
-.pd-handle { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #fff; border: 2px solid #2f6fed; border-radius: 3px; pointer-events: auto; box-sizing: border-box; }
+.pd-handle { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; background: #fff; border: 2px solid #2f6fed; border-radius: 3px; pointer-events: auto; box-sizing: border-box; touch-action: none; }
+/* an invisible, finger-sized grip around each small handle */
+.pd-handle::before { content: ""; position: absolute; inset: -14px; }
+@media (pointer: coarse) { .pd-handle { width: 18px; height: 18px; margin: -9px 0 0 -9px; } }
 .pd-h-nw { left: 0; top: 0; cursor: nwse-resize; }
 .pd-h-n { left: 50%; top: 0; cursor: ns-resize; }
 .pd-h-ne { left: 100%; top: 0; cursor: nesw-resize; }
@@ -1416,3 +1434,47 @@ html.pd-editing .wix-tree-name { opacity: 1; pointer-events: auto; } /* hover-on
 .pd-ui .drop-ask-check input { width: auto; height: auto; }
 .drop-ask-error { margin: 0; color: #ffb4a8; }
 .drop-ask-foot { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; border-top: 1px solid #333; padding-top: 10px; }
+
+/* ======================= touch screens and phones ======================= */
+@media (hover: none) {
+  .wix-tree-name { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* phones and small tablets: buttons big enough for a finger, words big enough to read */
+@media (max-width: 979px) {
+  .wix-site-links { font-size: 15px; white-space: normal; }
+  .wix-site-links a { display: inline-block; padding: 10px 4px; }
+  .wix-pill { height: 36px; padding: 0 16px; font-size: 16px; }
+  .wix-home, .wix-home-lg { width: 44px; height: 44px; }
+  .wix-content-rich, .wix-content-rich-13 { font-size: 15px; }
+  .wix-home-intro { font-size: 15px; }
+  /* small links: a taller tap area, same look */
+  .wix-gallery-filter a, .wix-content-people a { display: inline-block; padding: 10px 3px; }
+  .wix-footer-credit a { display: inline-block; padding: 10px 0; }
+}
+
+/* editing on a phone or small tablet: the Design settings are a sheet at the bottom (it can fold away) instead of a
+   panel over the toolbar, and a child's pencil menu is a sheet too (it opened off the left edge of the screen) */
+@media (max-width: 979px) {
+  .pd-handle { display: none; }
+  .pd-panel, .pd-panel-left { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 48vh; border-radius: 12px 12px 0 0; }
+  .pd-panel-folded { max-height: 50px; overflow: hidden; }
+  .pd-panel-top { justify-content: flex-start; margin-bottom: 8px; }
+  .pd-head { padding-right: 0; }
+  html.pd-editing body { padding-bottom: 48vh; }
+  /* (the floating Add photos / Design / Add children buttons step aside while it is open: they covered its last buttons) */
+  body:has(.kid-tools-menu) .photo-add-launch, body:has(.kid-tools-menu) .pd-launch, body:has(.kid-tools-menu) .children-add-launch { display: none; }
+  .kid-tools-menu { position: fixed; z-index: 2147483100; top: auto; left: 8px; right: 8px; bottom: 8px; width: auto; max-height: 70vh; overflow: auto; font-size: 15px; box-shadow: 0 -4px 32px #0006; }
+}
+
+/* fingers: bigger editing buttons, and text boxes at 16px (iPhones zoom into smaller ones and stay zoomed) */
+@media (pointer: coarse) {
+  .kid-tools-open { width: 36px; height: 36px; font-size: 17px; }
+  .kid-tools-menu > button, .parent-slot-buttons button, .block-slot-buttons button, .kid-slot > .kid-slot-save { min-height: 40px; }
+  .partner-slot-change { top: 56px; height: 32px; }
+  .parent-slot-open { height: 34px; padding: 0 12px; font-size: 14px; }
+  .wix-person-group > .parent-slot-open { height: 30px; font-size: 13px; }
+  .kid-slot-name, .kid-tools-menu input, .kid-tools-menu select, .parent-slot-fields input, .parent-slot-fields select,
+  .drop-ask input, .drop-ask select, .pd-ui input:not([type="range"]):not([type="color"]):not([type="checkbox"]), .pd-ui select, .pd-ui textarea { font-size: 16px !important; }
+  .pd-ui button { min-height: 36px; }
+}

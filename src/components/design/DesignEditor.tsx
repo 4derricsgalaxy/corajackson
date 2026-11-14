@@ -8,7 +8,7 @@ import { PIECE_LABELS } from "@/lib/design/keys";
 import { canCrop, openCrop } from "./CropDialog";
 import { snapshot } from "./snapshot";
 import { designStore, isDirty, useDesignState } from "./store";
-import { failText, plainError, sendForm, sendJson } from "@/lib/net";
+import { failText, plainError, sendForm, sendJson, timeoutSignal } from "@/lib/net";
 
 /**
  * The on-page Design tool (edit mode only). "Design" turns it on for the page you are on:
@@ -239,6 +239,11 @@ export function DesignEditor() {
   const [, force] = useState(0);
   const overlay = useRef<HTMLDivElement>(null);
   const selRef = useRef<Sel>(null);
+  /** below 980px moves and sizes don't show (phones re-flow the page), so nothing is moved or resized there */
+  const narrowRef = useRef(false);
+  /** a finger on the page: it selects only if it lifts without sliding (a slide scrolls the page) */
+  const tap = useRef<null | { id: number; x: number; y: number; target: EventTarget | null }>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
   // Ctrl+click adds more things to the selection: they move (drag / arrows), copy and delete together with `sel`
   const [more, setMore] = useState<Sel[]>([]);
   const moreRef = useRef<Sel[]>([]);
@@ -285,7 +290,10 @@ export function DesignEditor() {
   }, [active]);
 
   useEffect(() => {
-    const onResize = () => setNarrow(window.innerWidth < 980);
+    const onResize = () => {
+      narrowRef.current = window.innerWidth < 980;
+      setNarrow(narrowRef.current);
+    };
     onResize();
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -351,7 +359,7 @@ export function DesignEditor() {
   useEffect(() => {
     if (!active || !path || access?.path === path) return;
     let live = true;
-    fetch(`/api/design/access?path=${encodeURIComponent(path)}`, { cache: "no-store", signal: AbortSignal.timeout(30_000) })
+    fetch(`/api/design/access?path=${encodeURIComponent(path)}`, { cache: "no-store", signal: timeoutSignal(30_000) })
       .then(async (r) => {
         const out = (await r.json().catch(() => ({}))) as { canEdit?: boolean; own?: string; error?: string };
         if (!r.ok) throw new Error(out.error ?? failText(r.status, "open Design"));
@@ -370,6 +378,29 @@ export function DesignEditor() {
     const tidy = flattenHolders(saved);
     if (tidy !== saved) designStore.adopt(tidy, flattenHolders(design));
   }, [active, canEdit, path]);
+
+  // what is selected holds on to a finger (so it can be dragged); everything else lets a finger scroll the page
+  useEffect(() => {
+    if (!active) return;
+    const els = [sel, ...more].map((x) => selEl(x)).filter((x): x is HTMLElement => Boolean(x));
+    els.forEach((el) => el.classList.add("pd-sel"));
+    return () => els.forEach((el) => el.classList.remove("pd-sel"));
+  }, [active, sel, more]);
+
+  // the toolbar can wrap onto several rows on a small screen: the page starts below all of them
+  useEffect(() => {
+    if (!active) return;
+    const bar = document.querySelector<HTMLElement>(".pd-bar[role=toolbar]");
+    if (!bar) return;
+    const set = () => document.documentElement.style.setProperty("--pd-bar-h", `${bar.offsetHeight}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(bar);
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty("--pd-bar-h");
+    };
+  }, [active, access]);
 
   /* ---------- selection frame follows the selected thing (every frame: pages move while you work) ---------- */
   useEffect(() => {
@@ -534,6 +565,19 @@ export function DesignEditor() {
       e.stopPropagation();
       e.preventDefault();
       if (e.button !== 0) return;
+      const touch = e.pointerType === "touch" || e.pointerType === "pen";
+      if (touch || narrowRef.current) {
+        // a finger only moves something already selected (on a wide screen); anything else waits to see whether it
+        // is a tap (select it) or a swipe (the page scrolls). On a narrow screen nothing is ever moved or resized.
+        const holding = !narrowRef.current && group().some((x) => {
+          const xel = selEl(x);
+          return e.target instanceof Node && xel?.contains(e.target) && inRect(visualRect(xel), e.clientX, e.clientY);
+        });
+        if (!holding) {
+          tap.current = { id: e.pointerId, x: e.clientX, y: e.clientY, target: e.target };
+          return;
+        }
+      }
       // (the picture under the pointer: a thumbnail's click lands on its button, not on the <img> itself)
       setPicked(document.elementsFromPoint(e.clientX, e.clientY).find((n): n is HTMLImageElement => n instanceof HTMLImageElement) ?? null);
       const el = hit(e.target);
@@ -613,6 +657,16 @@ export function DesignEditor() {
     };
 
     const onUp = (e: PointerEvent) => {
+      const t = tap.current;
+      if (t && t.id === e.pointerId) {
+        tap.current = null;
+        if (e.type === "pointercancel" || Math.hypot(e.clientX - t.x, e.clientY - t.y) > 10) return; // it was a swipe
+        setPicked(document.elementsFromPoint(e.clientX, e.clientY).find((n): n is HTMLImageElement => n instanceof HTMLImageElement) ?? null);
+        const el = hit(t.target);
+        const canvas = canvasEl();
+        select(el ? selOf(el) : canvas && t.target instanceof Node && canvas.contains(t.target) ? { kind: "page" } : null);
+        return;
+      }
       const d = drag.current;
       if (!d || e.pointerId !== d.pointerId) return;
       drag.current = null;
@@ -650,7 +704,7 @@ export function DesignEditor() {
       const step = e.shiftKey ? 10 : 1;
       const delta = { arrowleft: [-step, 0], arrowright: [step, 0], arrowup: [0, -step], arrowdown: [0, step] }[k];
       const all = group();
-      if (!delta || !all.length) return;
+      if (!delta || !all.length || narrowRef.current) return;
       e.preventDefault();
       let d = designStore.get().design;
       for (const cur of all) {
@@ -890,9 +944,15 @@ export function DesignEditor() {
         {more.map((m, i) => <div key={i} className="pd-ui pd-frame pd-frame-extra" />)}
       </div>
 
-      <aside className={panelLeft ? "pd-ui pd-panel pd-panel-left" : "pd-ui pd-panel"} aria-label="Design settings">
+      <aside className={`pd-ui pd-panel${panelLeft ? " pd-panel-left" : ""}${narrow && !panelOpen ? " pd-panel-folded" : ""}`} aria-label="Design settings">
         <div className="pd-panel-top">
-          <button type="button" className="pd-mini" onClick={() => setPanelLeft((v) => !v)} title="Move this panel to the other side">⇆</button>
+          {narrow ? (
+            <button type="button" className="pd-mini pd-fold" onClick={() => setPanelOpen((v) => !v)} aria-expanded={panelOpen}>
+              {panelOpen ? "▾ Hide settings" : "▴ Settings"}
+            </button>
+          ) : (
+            <button type="button" className="pd-mini" onClick={() => setPanelLeft((v) => !v)} title="Move this panel to the other side">⇆</button>
+          )}
         </div>
         {more.length > 0 && (
           <p className="pd-hint pd-multi">
@@ -902,7 +962,7 @@ export function DesignEditor() {
         {sel?.kind === "page" || !sel ? (
           <PagePanel personPage={/^\/family\/[^/]+$/.test(path ?? "")} design={s.design} commit={commit} onPicture={() => setModal({ kind: "picture", purpose: "page" })} onPersonPicture={() => setModal({ kind: "picture", purpose: "person-bg" })} onPersonBackground={personBackground} bgPrevious={bgPrevious} onCopy={() => setModal({ kind: "copy" })} onVersions={() => setModal({ kind: "versions" })} onDefault={defaultFormat} onShow={(key) => { commit(withLook(designStore.get().design, { kind: "piece", key }, { hidden: undefined })); select({ kind: "piece", key }); }} selected={sel?.kind === "page"} />
         ) : (
-          <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} picked={picked} design={s.design} apply={apply} commit={commit} setSel={select} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} />
+          <ItemPanel key={sel.kind === "piece" ? sel.key : sel.id} sel={sel} picked={picked} design={s.design} apply={apply} commit={commit} setSel={select} onReplace={() => setModal({ kind: "picture", purpose: "replace" })} onSnackbox={editInSnackbox} narrow={narrow} />
         )}
       </aside>
 
@@ -974,8 +1034,10 @@ function NumField({ label, value, placeholder, min, max, step = 1, onLive }: {
   );
 }
 
-function ItemPanel({ sel, picked, design, apply, commit, setSel, onReplace, onSnackbox }: {
+function ItemPanel({ sel, picked, design, apply, commit, setSel, onReplace, onSnackbox, narrow }: {
   sel: Exclude<Sel, null | { kind: "page" }>;
+  /** below 980px: no moving or resizing */
+  narrow: boolean;
   /** the picture last clicked on the page */
   picked: HTMLImageElement | null;
   design: Design;
@@ -1106,7 +1168,8 @@ function ItemPanel({ sel, picked, design, apply, commit, setSel, onReplace, onSn
         </label>
       </details>
 
-      <details open className="pd-sec">
+      {narrow && <p className="pd-hint">Moving and resizing works on a computer or a tablet held sideways (980 pixels wide or more): phones arrange the page for their own screen.</p>}
+      <details open className="pd-sec" hidden={narrow}>
         <summary>Place and size</summary>
         <div className="pd-row pd-wrap">
           <NumField label={sel.kind === "piece" ? "Move →" : "Left"} value={look.x} placeholder={0} min={-3000} max={3000} onLive={(v) => apply({ x: v }, "live")} />
@@ -1320,7 +1383,7 @@ function PersonBackgroundControls({ onPicture, onChange, previous, children }: {
 
 let libraryCache: Promise<Library> | null = null;
 const loadLibrary = () =>
-  (libraryCache ??= fetch("/api/design/library", { signal: AbortSignal.timeout(45_000) })
+  (libraryCache ??= fetch("/api/design/library", { signal: timeoutSignal(45_000) })
     .then(async (r) => {
       if (!r.ok) throw new Error(((await r.json().catch(() => ({}))) as { error?: string }).error ?? failText(r.status, "load the family pictures"));
       return (await r.json()) as Library;

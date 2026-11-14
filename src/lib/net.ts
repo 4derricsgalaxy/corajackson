@@ -6,17 +6,25 @@
 /** the server functions allow 60 s; give the answer a little longer to arrive */
 const LIMIT_MS = 75_000;
 
+/** a signal that gives up after `ms` (AbortSignal.timeout where the browser has it - iPhones before iOS 16 don't) */
+export function timeoutSignal(ms: number): AbortSignal {
+  if (typeof AbortSignal.timeout === "function") return AbortSignal.timeout(ms);
+  const c = new AbortController();
+  setTimeout(() => c.abort(new DOMException("The request took too long.", "TimeoutError")), ms);
+  return c.signal;
+}
+
 export function sendJson(url: string, body: unknown, timeoutMs = LIMIT_MS): Promise<Response> {
   return fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: timeoutSignal(timeoutMs),
   });
 }
 
 export function sendForm(url: string, form: FormData, timeoutMs = LIMIT_MS): Promise<Response> {
-  return fetch(url, { method: "POST", body: form, signal: AbortSignal.timeout(timeoutMs) });
+  return fetch(url, { method: "POST", body: form, signal: timeoutSignal(timeoutMs) });
 }
 
 /** what to say when the server answered with an error but no message of its own */

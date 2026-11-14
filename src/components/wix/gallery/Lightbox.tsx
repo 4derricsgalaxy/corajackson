@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { editableField } from "@/lib/cms/sdk";
+import { useSwipe } from "../useSwipe";
 import type { GalleryItem } from "./types";
 
 interface Props {
@@ -17,14 +18,26 @@ interface Props {
 /** Dark full-screen photo viewer: prev/next arrows, ←/→/Esc keys, click the backdrop to close. */
 export function Lightbox({ items, index, onIndex, onClose, editable }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const count = items.length;
   const item = items[index];
+  const swipe = useSwipe(() => onIndex((index - 1 + count) % count), () => onIndex((index + 1) % count), count > 1);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       else if (e.key === "ArrowLeft" && count > 1) onIndex((index - 1 + count) % count);
       else if (e.key === "ArrowRight" && count > 1) onIndex((index + 1) % count);
+      else if (e.key === "Tab") {
+        // the keyboard stays inside the viewer while it is open
+        const nodes = dialogRef.current?.querySelectorAll<HTMLElement>("button");
+        if (!nodes?.length) return;
+        const first = nodes[0], last = nodes[nodes.length - 1];
+        const active = document.activeElement;
+        if (!dialogRef.current?.contains(active)) { e.preventDefault(); first.focus(); }
+        else if (e.shiftKey && active === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && active === last) { e.preventDefault(); first.focus(); }
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -48,7 +61,7 @@ export function Lightbox({ items, index, onIndex, onClose, editable }: Props) {
   const edit = (field: string) => (editable ? editableField(item.id, field) : {});
 
   return createPortal(
-    <div className="wix-gallery-lightbox" role="dialog" aria-modal="true" aria-label={label} onClick={onClose}>
+    <div ref={dialogRef} className="wix-gallery-lightbox" role="dialog" aria-modal="true" aria-label={label} onClick={onClose} {...swipe}>
       <button ref={closeRef} type="button" className="wix-gallery-lightbox-close" aria-label="Close" onClick={onClose}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden><path d="M4 4l16 16M20 4 4 20" /></svg>
       </button>
